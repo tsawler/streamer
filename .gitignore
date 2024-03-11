@@ -2,5 +2,5 @@
 Makefile
 Taskfile.yml
 .env
-uploads/*
+upload/*
 output/*
