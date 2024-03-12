@@ -60,6 +60,8 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 
+	// TODO: Encrypt segments.
+
 	go func() {
 		ffmpegCmd := exec.Command(
 			"ffmpeg",
@@ -91,6 +93,7 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 			"-hls_playlist_type", "event",
 			"-hls_time", strconv.Itoa(v.SegmentDuration),
 			"-hls_flags", "independent_segments",
+			"-hls_segment_type", "mpegts",
 			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
 			"-profile:v", "baseline", // baseline profile is compatible with most devices
 			"-level", "3.0",
