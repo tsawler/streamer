@@ -24,7 +24,10 @@ func New(in, out string, seg int) *Encoder {
 	}
 }
 
-func (e *Encoder) Encode() (*string, error) {
+// EncodeToHLS takes input file, from receiver, and encodes to HLS format
+// at 1080p, 720p, and 480p, putting resulting output in the output directory
+// which is specified in the receiver.
+func (e *Encoder) EncodeToHLS() (*string, error) {
 	// Create output directory if it does not exist.
 	const mode = 0755
 	if _, err := os.Stat(e.OutputDir); os.IsNotExist(err) {
@@ -70,6 +73,7 @@ func (e *Encoder) Encode() (*string, error) {
 		"-profile:v", "baseline", // baseline profile is compatible with most devices
 		"-level", "3.0",
 		"-progress", "-",
+		"-nostats",
 		fmt.Sprintf("%s/%s-%%v.m3u8", e.OutputDir, baseFileName),
 	)
 
@@ -77,6 +81,8 @@ func (e *Encoder) Encode() (*string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HLS: %v\nOutput: %s", err, string(output))
 	}
+
+	//fmt.Println(string(output))
 
 	msg := fmt.Sprintf("%s/%s.m3u8", e.OutputDir, baseFileName)
 	return &msg, nil
