@@ -24,20 +24,20 @@ type ProcessingMessage struct {
 	Message    string
 }
 
-func New(in, out string, seg int) *VideoProcessor {
+func New(in, out string, seg int, c chan ProcessingMessage) *VideoProcessor {
 	return &VideoProcessor{
 		InputFile:       in,
 		OutputDir:       out,
 		SegmentDuration: seg,
-		NotifyChan:      make(chan ProcessingMessage),
+		NotifyChan:      c,
 	}
 }
 
-// EncodeToHLS takes input file, from receiver, and encodes to HLS format
-// at 1080p, 720p, and 480p, putting resulting output in the output directory
-// which is specified in the receiver.
+// EncodeToHLS takes input file, from receiver v.InputFile, and encodes to HLS format
+// at 1080p, 720p, and 480p, putting resulting files in the output directory
+// specified in the receiver as v.OutputDir.
 func (v *VideoProcessor) EncodeToHLS() (*string, error) {
-
+	// Create output directory if it does not exist.
 	const mode = 0755
 	if _, err := os.Stat(v.OutputDir); os.IsNotExist(err) {
 		err := os.MkdirAll(v.OutputDir, mode)
@@ -48,7 +48,6 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 
-	// Create output directory if it does not exist.
 	go func() {
 		ffmpegCmd := exec.Command(
 			"ffmpeg",
