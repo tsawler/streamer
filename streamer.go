@@ -108,3 +108,19 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 	msg := fmt.Sprintf("%s/%s.m3u8", v.OutputDir, baseFileName)
 	return &msg, nil
 }
+
+// EncodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
+// putting resulting file in the output directory specified in the receiver as v.OutputDir.
+func (v *VideoProcessor) EncodeToMP4() (*string, error) {
+	// TODO: implement logic
+
+	return nil, nil
+}
+
+// CheckSignature returns true if the signature supplied in the URL is valid, and false
+// if it is not, or does not exist.
+func (v *VideoProcessor) CheckSignature(sig string) bool {
+	// TODO: implement logic
+
+	return true
+}
