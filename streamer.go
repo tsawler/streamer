@@ -2,6 +2,7 @@ package streamer
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -23,7 +24,15 @@ func New(in, out string, seg int) *Encoder {
 	}
 }
 
-func (e *Encoder) Encode() (string, error) {
+func (e *Encoder) Encode() (*string, error) {
+	// Create output directory if it does not exist.
+	const mode = 0755
+	if _, err := os.Stat(e.OutputDir); os.IsNotExist(err) {
+		err := os.MkdirAll(e.OutputDir, mode)
+		if err != nil {
+			return nil, err
+		}
+	}
 	b := path.Base(e.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 
@@ -40,10 +49,10 @@ func (e *Encoder) Encode() (string, error) {
 		"-crf", "22",
 		"-c:a", "aac",
 		"-ar", "48000",
-		"-filter:v:0", "scale=w=1920:h=1080",
-		"-maxrate:v:0", "900k",
+		"-filter:v:0", "scale=-2:1080",
+		"-maxrate:v:0", "1200k",
 		"-b:a:0", "64k",
-		"-filter:v:1", "scale=w=1280:h=720",
+		"-filter:v:1", "scale=-2:720",
 		"-maxrate:v:1", "600k",
 		"-b:a:1", "128k",
 		"-filter:v:2", "scale=-2:480",
@@ -66,7 +75,9 @@ func (e *Encoder) Encode() (string, error) {
 
 	output, err := ffmpegCmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("failed to create HLS: %v\nOutput: %s", err, string(output))
+		return nil, fmt.Errorf("failed to create HLS: %v\nOutput: %s", err, string(output))
 	}
-	return fmt.Sprintf("%s/%s.m3u8", e.OutputDir, baseFileName), nil
+
+	msg := fmt.Sprintf("%s/%s.m3u8", e.OutputDir, baseFileName)
+	return &msg, nil
 }
