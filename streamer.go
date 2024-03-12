@@ -3,6 +3,8 @@ package streamer
 import (
 	"fmt"
 	"github.com/tsawler/signer"
+	"github.com/xfrr/goffmpeg/transcoder"
+	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -48,14 +50,13 @@ func New(options Options) *VideoProcessor {
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir.
 func (v *VideoProcessor) EncodeToHLS() (*string, error) {
-	// Create output directory if it does not exist.
-	const mode = 0755
-	if _, err := os.Stat(v.OutputDir); os.IsNotExist(err) {
-		err := os.MkdirAll(v.OutputDir, mode)
-		if err != nil {
-			return nil, err
-		}
+	// Make sure output directory exists.
+	err := v.createDirIfNotExists()
+	if err != nil {
+		return nil, err
 	}
+
+	// Get base filename.
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 
@@ -120,12 +121,46 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 	return &msg, nil
 }
 
+func (v *VideoProcessor) createDirIfNotExists() error {
+	// Create output directory if it does not exist.
+	const mode = 0755
+	if _, err := os.Stat(v.OutputDir); os.IsNotExist(err) {
+		err := os.MkdirAll(v.OutputDir, mode)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // EncodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
 func (v *VideoProcessor) EncodeToMP4() (*string, error) {
-	// TODO: implement logic
+	// Make sure output directory exists.
+	err := v.createDirIfNotExists()
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	trans := new(transcoder.Transcoder)
+	b := path.Base(v.InputFile)
+	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
+	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
+
+	err = trans.Initialize(v.InputFile, outputPath)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	// set codec
+	trans.MediaFile().SetVideoCodec("libx264")
+
+	// Start transcoder process with progress checking
+	done := trans.Run(true)
+	<-done
+
+	return &outputPath, nil
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false

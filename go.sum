@@ -5,6 +5,8 @@ github.com/tsawler/itsdangerous v1.0.1 h1:RSaqEu6orO0Ok85KePHOpAgPgGd0GFRHWa65Vr
 github.com/tsawler/itsdangerous v1.0.1/go.mod h1:oV6RuJKMko73/wBhQ/3CQvK6wSLdJFCVNSYYbebKEQY=
 github.com/tsawler/signer v1.1.2 h1:+HsvcW8bW3eWS5oErEL23W97/csEvj5KKaRT0Wj1NuQ=
 github.com/tsawler/signer v1.1.2/go.mod h1:CovvbBVT6cGzBIlvetodDKfJvPKYcav+eKrqZGKAUsI=
+github.com/xfrr/goffmpeg v1.0.0 h1:trxuLNb9ys50YlV7gTVNAII9J0r00WWqCGTE46Gc3XU=
+github.com/xfrr/goffmpeg v1.0.0/go.mod h1:zjLRiirHnip+/hVAT3lVE3QZ6SGynr0hcctUMNNISdQ=
 golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.7.0 h1:3jlCCIQZPdOYu1h8BkNvLz8Kgwtae2cagcG/VamtZRU=
 golang.org/x/sys v0.7.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
