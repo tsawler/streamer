@@ -20,6 +20,7 @@ type VideoProcessor struct {
 	SegmentDuration int
 	NotifyChan      chan ProcessingMessage
 	Secret          string
+	KeyInfo         string
 }
 
 type ProcessingMessage struct {
@@ -34,6 +35,7 @@ type Options struct {
 	SegmentationDuration int
 	NotifyChan           chan ProcessingMessage
 	Secret               string
+	KeyInfo              string
 }
 
 func New(options Options) *VideoProcessor {
@@ -43,6 +45,7 @@ func New(options Options) *VideoProcessor {
 		SegmentDuration: options.SegmentationDuration,
 		NotifyChan:      options.NotifyChan,
 		Secret:          options.Secret,
+		KeyInfo:         options.KeyInfo,
 	}
 }
 
@@ -94,6 +97,8 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 			"-hls_time", strconv.Itoa(v.SegmentDuration),
 			"-hls_flags", "independent_segments",
 			"-hls_segment_type", "mpegts",
+			"-hls_key_info_file", v.KeyInfo,
+			"-hls_playlist_type", "vod",
 			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
 			"-profile:v", "baseline", // baseline profile is compatible with most devices
 			"-level", "3.0",
