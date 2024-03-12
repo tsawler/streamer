@@ -2,6 +2,7 @@ package streamer
 
 import (
 	"fmt"
+	"github.com/tsawler/signer"
 	"os"
 	"os/exec"
 	"path"
@@ -16,6 +17,7 @@ type VideoProcessor struct {
 	OutputDir       string
 	SegmentDuration int
 	NotifyChan      chan ProcessingMessage
+	Secret          string
 }
 
 type ProcessingMessage struct {
@@ -24,12 +26,21 @@ type ProcessingMessage struct {
 	Message    string
 }
 
-func New(in, out string, seg int, c chan ProcessingMessage) *VideoProcessor {
+type Options struct {
+	InputFile            string
+	OutputDir            string
+	SegmentationDuration int
+	NotifyChan           chan ProcessingMessage
+	Secret               string
+}
+
+func New(options Options) *VideoProcessor {
 	return &VideoProcessor{
-		InputFile:       in,
-		OutputDir:       out,
-		SegmentDuration: seg,
-		NotifyChan:      c,
+		InputFile:       options.InputFile,
+		OutputDir:       options.OutputDir,
+		SegmentDuration: options.SegmentationDuration,
+		NotifyChan:      options.NotifyChan,
+		Secret:          options.Secret,
 	}
 }
 
@@ -118,9 +129,15 @@ func (v *VideoProcessor) EncodeToMP4() (*string, error) {
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
-// if it is not, or does not exist.
-func (v *VideoProcessor) CheckSignature(sig string) bool {
-	// TODO: implement logic
+// if it is not, or does not exist. It also returns false if the expiration time (minutes)
+// has passed.
+func (v *VideoProcessor) CheckSignature(urlPath string, expiration int) bool {
+	sign := signer.Signature{Secret: v.Secret}
+	valid, err := sign.VerifyURL(urlPath)
+	if err != nil {
+		return false
+	}
 
-	return true
+	valid = sign.Expired(urlPath, expiration)
+	return valid
 }
