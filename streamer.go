@@ -235,6 +235,9 @@ func (v *VideoProcessor) createDirIfNotExists() error {
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
 func (v *VideoProcessor) encodeToMP4() (*string, error) {
+	successful := true
+	message := "Processing complete"
+
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
@@ -245,19 +248,31 @@ func (v *VideoProcessor) encodeToMP4() (*string, error) {
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
+	go func() {
+		err = trans.Initialize(v.InputFile, outputPath)
+		if err != nil {
+			log.Println(err)
+			successful = false
+			message = "Failed to initialize"
+		}
 
-	err = trans.Initialize(v.InputFile, outputPath)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
+		// set codec
+		trans.MediaFile().SetVideoCodec("libx264")
 
-	// set codec
-	trans.MediaFile().SetVideoCodec("libx264")
+		// Start transcoder process with progress checking
+		done := trans.Run(true)
+		err = <-done
+		if err != nil {
+			successful = false
+			message = fmt.Sprintf("failed to create MP$: %v\n", err)
+		}
 
-	// Start transcoder process with progress checking
-	done := trans.Run(true)
-	<-done
+		v.NotifyChan <- ProcessingMessage{
+			ID:         v.ID,
+			Successful: successful,
+			Message:    message,
+		}
+	}()
 
 	return &outputPath, nil
 }
