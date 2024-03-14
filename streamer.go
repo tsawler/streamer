@@ -267,14 +267,18 @@ func (v *VideoProcessor) encodeToMP4() (*string, error) {
 			message = fmt.Sprintf("failed to create MP$: %v\n", err)
 		}
 
-		v.NotifyChan <- ProcessingMessage{
-			ID:         v.ID,
-			Successful: successful,
-			Message:    message,
-		}
+		v.sendToResultChan(successful, message)
 	}()
 
 	return &outputPath, nil
+}
+
+func (v *VideoProcessor) sendToResultChan(successful bool, message string) {
+	v.NotifyChan <- ProcessingMessage{
+		ID:         v.ID,
+		Successful: successful,
+		Message:    message,
+	}
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
