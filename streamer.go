@@ -13,6 +13,7 @@ import (
 	"strings"
 )
 
+// VideoProcessor is the type for videos we want to work with.
 type VideoProcessor struct {
 	ID              int
 	InputFile       string
@@ -23,12 +24,14 @@ type VideoProcessor struct {
 	KeyInfo         string
 }
 
+// ProcessingMessage is the information sent back to the client.
 type ProcessingMessage struct {
 	ID         int
 	Successful bool
 	Message    string
 }
 
+// Options allows us to specify options for our video.
 type Options struct {
 	InputFile            string
 	OutputDir            string
@@ -38,6 +41,7 @@ type Options struct {
 	KeyInfo              string
 }
 
+// New is our factory method, to produce a new *VideoProcessor.
 func New(options Options) *VideoProcessor {
 	return &VideoProcessor{
 		InputFile:       options.InputFile,
@@ -62,8 +66,6 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 	// Get base filename.
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
-
-	// TODO: Encrypt segments.
 
 	go func() {
 		ffmpegCmd := exec.Command(
@@ -122,8 +124,6 @@ func (v *VideoProcessor) EncodeToHLS() (*string, error) {
 		}
 
 	}()
-
-	//fmt.Println(string(output))
 
 	msg := fmt.Sprintf("%s/%s.m3u8", v.OutputDir, baseFileName)
 	return &msg, nil
