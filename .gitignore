@@ -1,6 +1,1 @@
 .idea
-Makefile
-Taskfile.yml
-.env
-upload/*
-output/*
