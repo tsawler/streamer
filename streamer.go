@@ -14,8 +14,8 @@ import (
 	"strings"
 )
 
-// VideoProcessor is the type for videos we want to work with.
-type VideoProcessor struct {
+// Video is the type for videos we want to work with.
+type Video struct {
 	ID              int
 	InputFile       string
 	OutputDir       string
@@ -23,6 +23,7 @@ type VideoProcessor struct {
 	NotifyChan      chan ProcessingMessage
 	Secret          string
 	KeyInfo         string
+	EncodingType    string
 }
 
 // ProcessingMessage is the information sent back to the client.
@@ -32,31 +33,20 @@ type ProcessingMessage struct {
 	Message    string
 }
 
-// Options allows us to specify options for our video.
-type Options struct {
-	InputFile            string
-	OutputDir            string
-	SegmentationDuration int
-	NotifyChan           chan ProcessingMessage
-	Secret               string
-	KeyInfo              string
-}
+// New creates, and returns a new worker pool.
+func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
+	workerPool := make(chan chan VideoProcessingJob, maxWorkers)
 
-// New is our factory method, to produce a new *VideoProcessor.
-func New(options Options) *VideoProcessor {
-	return &VideoProcessor{
-		InputFile:       options.InputFile,
-		OutputDir:       options.OutputDir,
-		SegmentDuration: options.SegmentationDuration,
-		NotifyChan:      options.NotifyChan,
-		Secret:          options.Secret,
-		KeyInfo:         options.KeyInfo,
+	return &VideoDispatcher{
+		jobQueue:   jobQueue,
+		maxWorkers: maxWorkers,
+		workerPool: workerPool,
 	}
 }
 
 // Encode allows us to encode the source file to one of the supported formats.
-func (v *VideoProcessor) Encode(enctype string) (*string, error) {
-	switch enctype {
+func (v *Video) Encode() (*string, error) {
+	switch v.EncodingType {
 	case "mp4":
 		return v.encodeToMP4()
 	case "hls":
@@ -71,7 +61,7 @@ func (v *VideoProcessor) Encode(enctype string) (*string, error) {
 // encodeToHLSEncrypted takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir. The resulting files are encrypted.
-func (v *VideoProcessor) encodeToHLSEncrypted() (*string, error) {
+func (v *Video) encodeToHLSEncrypted() (*string, error) {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
@@ -147,7 +137,7 @@ func (v *VideoProcessor) encodeToHLSEncrypted() (*string, error) {
 // encodeToHLS takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir.
-func (v *VideoProcessor) encodeToHLS() (*string, error) {
+func (v *Video) encodeToHLS() (*string, error) {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
@@ -220,7 +210,7 @@ func (v *VideoProcessor) encodeToHLS() (*string, error) {
 	return &msg, nil
 }
 
-func (v *VideoProcessor) createDirIfNotExists() error {
+func (v *Video) createDirIfNotExists() error {
 	// Create output directory if it does not exist.
 	const mode = 0755
 	if _, err := os.Stat(v.OutputDir); os.IsNotExist(err) {
@@ -234,7 +224,7 @@ func (v *VideoProcessor) createDirIfNotExists() error {
 
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
-func (v *VideoProcessor) encodeToMP4() (*string, error) {
+func (v *Video) encodeToMP4() (*string, error) {
 	successful := true
 	message := "Processing complete"
 
@@ -273,7 +263,7 @@ func (v *VideoProcessor) encodeToMP4() (*string, error) {
 	return &outputPath, nil
 }
 
-func (v *VideoProcessor) sendToResultChan(successful bool, message string) {
+func (v *Video) sendToResultChan(successful bool, message string) {
 	v.NotifyChan <- ProcessingMessage{
 		ID:         v.ID,
 		Successful: successful,
@@ -284,7 +274,7 @@ func (v *VideoProcessor) sendToResultChan(successful bool, message string) {
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
 // if it is not, or does not exist. It also returns false if the expiration time (minutes)
 // has passed.
-func (v *VideoProcessor) CheckSignature(urlPath string, expiration int) bool {
+func (v *Video) CheckSignature(urlPath string, expiration int) bool {
 	sign := signer.Signature{Secret: v.Secret}
 	valid, err := sign.VerifyURL(urlPath)
 	if err != nil {
