@@ -27,8 +27,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/tsawler/streamer"
 	"log"
-	"streamer"
 )
 
 func main() {
@@ -48,23 +48,23 @@ func main() {
 		EncodingType:    "hls",
 	}
 
-	//video2 := streamer.Video{
-	//	ID:              2,
-	//	InputFile:       "./upload/j.mp4",
-	//	OutputDir:       "./output",
-	//	SegmentDuration: 10,
-	//	NotifyChan:      notifyChan,
-	//	EncodingType:    "mp4",
-	//}
+	video2 := streamer.Video{
+		ID:              2,
+		InputFile:       "./upload/j.mp4",
+		OutputDir:       "./output",
+		SegmentDuration: 10,
+		NotifyChan:      notifyChan,
+		EncodingType:    "mp4",
+	}
 
 	log.Println("Starting encode")
 	videoQueue <- streamer.VideoProcessingJob{
 		Video: video,
 	}
 
-	//videoQueue <- streamer.VideoProcessingJob{
-	//	Video: video2,
-	//}
+	videoQueue <- streamer.VideoProcessingJob{
+		Video: video2,
+	}
 
 	log.Println("Waiting for result...")
 

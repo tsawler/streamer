@@ -1,4 +1,4 @@
-module streamer
+module github.com/tsawler/streamer
 
 go 1.22
 
