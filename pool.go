@@ -46,11 +46,11 @@ func (w videoWorker) start() {
 }
 
 // stop the worker.
-func (w videoWorker) stop() {
-	go func() {
-		w.quitChan <- true
-	}()
-}
+//func (w videoWorker) stop() {
+//	go func() {
+//		w.quitChan <- true
+//	}()
+//}
 
 // VideoDispatcher holds info for a dispatcher.
 type VideoDispatcher struct {
