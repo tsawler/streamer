@@ -23,8 +23,8 @@ func newVideoWorker(id int, workerPool chan chan VideoProcessingJob) videoWorker
 }
 
 // videoWorker holds info for a pool worker. It has the numeric id of the worker,
-// the job queue, and the worker pool chan. A chan chan is used when the thing you want to send down the channel is
-// another channel to send things back.
+// the job queue, and the worker pool chan. A chan chan is used when the thing you want to
+// send down a channel is another channel to send things back.
 // See http://tleyden.github.io/blog/2013/11/23/understanding-chan-chans-in-go/
 type videoWorker struct {
 	id         int
