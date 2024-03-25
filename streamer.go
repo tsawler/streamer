@@ -16,24 +16,24 @@ import (
 
 // Video is the type for videos we want to work with.
 type Video struct {
-	ID              int
-	InputFile       string
-	OutputDir       string
-	SegmentDuration int
-	NotifyChan      chan ProcessingMessage
-	Secret          string
-	KeyInfo         string
-	EncodingType    string
+	ID              int                    // An arbitrary ID for the video.
+	InputFile       string                 // The path to the input file.
+	OutputDir       string                 // The path to the output directory.
+	SegmentDuration int                    // If HLS, how long should segments be in seconds?
+	NotifyChan      chan ProcessingMessage // A channel to receive the output message.
+	Secret          string                 // For encrypted HLS, the name of the file with the secret.
+	KeyInfo         string                 // For encrypted HLS, the key info file.
+	EncodingType    string                 // mp4, hls, or hls-encrypted.
 }
 
 // ProcessingMessage is the information sent back to the client.
 type ProcessingMessage struct {
-	ID         int
-	Successful bool
-	Message    string
+	ID         int    // The ID of the video.
+	Successful bool   // True if successfully encoded.
+	Message    string // A human-readable message.
 }
 
-// New creates, and returns a new worker pool.
+// New creates and returns a new worker pool.
 func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 	workerPool := make(chan chan VideoProcessingJob, maxWorkers)
 
@@ -44,8 +44,8 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 	}
 }
 
-// Encode allows us to encode the source file to one of the supported formats.
-func (v *Video) Encode() (*string, error) {
+// encode allows us to encode the source file to one of the supported formats.
+func (v *Video) encode() (*string, error) {
 	switch v.EncodingType {
 	case "mp4":
 		return v.encodeToMP4()
@@ -180,7 +180,6 @@ func (v *Video) encodeToHLS() (*string, error) {
 			"-hls_time", strconv.Itoa(v.SegmentDuration),
 			"-hls_flags", "independent_segments",
 			"-hls_segment_type", "mpegts",
-			//"-hls_key_info_file", v.KeyInfo,
 			"-hls_playlist_type", "vod",
 			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
 			"-profile:v", "baseline", // baseline profile is compatible with most devices
