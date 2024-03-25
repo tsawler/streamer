@@ -22,7 +22,7 @@ a `streamer.VideoProcessor` object.
 
 ## Sample usage
 
-~~~
+~~~go
 package main
 
 import (
@@ -75,7 +75,7 @@ func main() {
 		}
 
 	}
-V
+
 	fmt.Println("Done!")
 }
 ~~~
