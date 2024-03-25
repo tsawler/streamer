@@ -51,7 +51,7 @@ func (w videoWorker) start() {
 	}()
 }
 
-// stop the worker.
+// stop stops a worker.
 func (w videoWorker) stop() {
 	go func() {
 		w.quitChan <- true
@@ -60,7 +60,7 @@ func (w videoWorker) stop() {
 
 // VideoDispatcher holds info for a dispatcher.
 type VideoDispatcher struct {
-	workerPool chan chan VideoProcessingJob // Our worker pool channel.
+	WorkerPool chan chan VideoProcessingJob // Our worker pool channel.
 	maxWorkers int                          // The maximum number of workers in our pool.
 	jobQueue   chan VideoProcessingJob      // The channel we send work to.
 }
@@ -68,7 +68,7 @@ type VideoDispatcher struct {
 // Run runs the workers.
 func (d *VideoDispatcher) Run() {
 	for i := 0; i < d.maxWorkers; i++ {
-		worker := newVideoWorker(i+1, d.workerPool)
+		worker := newVideoWorker(i+1, d.WorkerPool)
 		worker.start()
 	}
 
@@ -81,7 +81,7 @@ func (d *VideoDispatcher) dispatch() {
 		select {
 		case job := <-d.jobQueue:
 			go func() {
-				workerJobQueue := <-d.workerPool // assign a channel from our worker pool to workerJobPool.
+				workerJobQueue := <-d.WorkerPool // assign a channel from our worker pool to workerJobPool.
 				workerJobQueue <- job            // Send the unit of work to our queue.
 			}()
 		}

@@ -40,7 +40,7 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 	return &VideoDispatcher{
 		jobQueue:   jobQueue,
 		maxWorkers: maxWorkers,
-		workerPool: workerPool,
+		WorkerPool: workerPool,
 	}
 }
 
