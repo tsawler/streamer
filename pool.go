@@ -2,6 +2,7 @@ package streamer
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 )
 
 // VideoProcessingJob is the unit of work to be performed. We wrap this type
@@ -63,6 +64,7 @@ type VideoDispatcher struct {
 	WorkerPool chan chan VideoProcessingJob // Our worker pool channel.
 	maxWorkers int                          // The maximum number of workers in our pool.
 	jobQueue   chan VideoProcessingJob      // The channel we send work to.
+	WebSocket  *websocket.Conn              // An (optional) websocket connection to send messages around.
 }
 
 // Run runs the workers.
