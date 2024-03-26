@@ -41,7 +41,7 @@ func main() {
 
 	video := streamer.Video{
 		ID:              1,
-		InputFile:       "./upload/i.mp4",
+		InputFile:       "./upload/k.mp4",
 		OutputDir:       "./output",
 		SegmentDuration: 10,
 		NotifyChan:      notifyChan,
@@ -69,11 +69,8 @@ func main() {
 	log.Println("Waiting for result...")
 
 	for i := 0; i < 2; i++ {
-		select {
-		case msg1 := <-notifyChan:
-			fmt.Println("Done", msg1.ID)
-		}
-
+		msg := <-notifyChan
+		fmt.Println("Done", msg.ID, msg.Message)
 	}
 
 	fmt.Println("Done!")
