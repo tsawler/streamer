@@ -3,6 +3,7 @@ package streamer
 import (
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/tsawler/signer"
 	"github.com/xfrr/goffmpeg/transcoder"
 	"log"
@@ -24,6 +25,8 @@ type Video struct {
 	Secret          string                 // For encrypted HLS, the name of the file with the secret.
 	KeyInfo         string                 // For encrypted HLS, the key info file.
 	EncodingType    string                 // mp4, hls, or hls-encrypted.
+	WebSocket       *websocket.Conn        // An (optional) websocket connection to send messages around.
+
 }
 
 // ProcessingMessage is the information sent back to the client.
@@ -46,6 +49,8 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 
 // encode allows us to encode the source file to one of the supported formats.
 func (v *Video) encode() (*string, error) {
+	v.pushToWs(fmt.Sprintf("Processing started for %d", v.ID))
+
 	switch v.EncodingType {
 	case "mp4":
 		return v.encodeToMP4()
@@ -54,6 +59,7 @@ func (v *Video) encode() (*string, error) {
 	case "hls-encrypted":
 		return v.encodeToHLSEncrypted()
 	default:
+		v.pushToWs(fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 		return nil, errors.New("invalid encoding type")
 	}
 }
@@ -122,11 +128,8 @@ func (v *Video) encodeToHLSEncrypted() (*string, error) {
 			message = fmt.Sprintf("failed to create HLS: %v\nOutput: %s", err, string(output))
 		}
 
-		v.NotifyChan <- ProcessingMessage{
-			ID:         v.ID,
-			Successful: successful,
-			Message:    message,
-		}
+		v.pushToWs(message)
+		v.sendToNotifyChan(successful, message)
 
 	}()
 
@@ -197,11 +200,8 @@ func (v *Video) encodeToHLS() (*string, error) {
 			message = fmt.Sprintf("failed to create HLS: %v\nOutput: %s", err, string(output))
 		}
 
-		v.NotifyChan <- ProcessingMessage{
-			ID:         v.ID,
-			Successful: successful,
-			Message:    message,
-		}
+		v.pushToWs(message)
+		v.sendToNotifyChan(successful, message)
 
 	}()
 
@@ -219,6 +219,20 @@ func (v *Video) createDirIfNotExists() error {
 		}
 	}
 	return nil
+}
+
+func (v *Video) pushToWs(msg string) {
+	if v.WebSocket != nil {
+		_ = v.WebSocket.WriteMessage(websocket.TextMessage, []byte(msg))
+	}
+}
+
+func (v *Video) sendToNotifyChan(successful bool, message string) {
+	v.NotifyChan <- ProcessingMessage{
+		ID:         v.ID,
+		Successful: successful,
+		Message:    message,
+	}
 }
 
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
@@ -255,19 +269,11 @@ func (v *Video) encodeToMP4() (*string, error) {
 			successful = false
 			message = fmt.Sprintf("failed to create MP$: %v\n", err)
 		}
-
-		v.sendToResultChan(successful, message)
+		v.pushToWs(message)
+		v.sendToNotifyChan(successful, message)
 	}()
 
 	return &outputPath, nil
-}
-
-func (v *Video) sendToResultChan(successful bool, message string) {
-	v.NotifyChan <- ProcessingMessage{
-		ID:         v.ID,
-		Successful: successful,
-		Message:    message,
-	}
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
