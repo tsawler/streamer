@@ -1,6 +1,7 @@
 package streamer
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/tsawler/signer"
@@ -221,6 +222,16 @@ func (v *Video) pushToWs(msg string) {
 	}
 }
 
+// pushJSONToWs pushes a message to websocket, if appropriate.
+func (v *Video) pushJSONToWs(payload map[string]string) {
+	if v.WebSocket != nil {
+		p, err := json.Marshal(payload)
+		if err == nil {
+			_ = v.WebSocket.WriteJSON(v.WebSocket.WriteJSON(p))
+		}
+	}
+}
+
 // sendToNotifyChan pushes a message down the notify channel.
 func (v *Video) sendToNotifyChan(successful bool, message string) {
 	v.NotifyChan <- ProcessingMessage{
@@ -272,9 +283,14 @@ func (v *Video) encodeToMP4() {
 					curProgress = curProgress + 2
 					oldInt = int(msg.Progress)
 					log.Printf("%d: %d%%\n", v.ID, curProgress)
-					if v.WebSocket != nil {
-						// TODO push to ws
+
+					data := map[string]string{
+						"message":  "progress",
+						"video_id": fmt.Sprintf("%d", v.ID),
+						"percent":  fmt.Sprintf("%d", int(msg.Progress)),
 					}
+					v.pushJSONToWs(data)
+					v.pushToWs(fmt.Sprintf("%d", int(msg.Progress)))
 				}
 			}
 		}
