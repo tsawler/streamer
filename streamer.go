@@ -122,6 +122,7 @@ func (v *Video) encodeToHLSEncrypted() {
 
 		_, err := ffmpegCmd.CombinedOutput()
 		if err != nil {
+			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
 			v.sendToNotifyChan(false, err.Error())
 			return
 		}
@@ -189,6 +190,7 @@ func (v *Video) encodeToHLS() {
 
 		_, err := ffmpegCmd.CombinedOutput()
 		if err != nil {
+			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
 			v.sendToNotifyChan(false, err.Error())
 			return
 		}
@@ -231,9 +233,6 @@ func (v *Video) sendToNotifyChan(successful bool, message string) {
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
 func (v *Video) encodeToMP4() {
-	successful := true
-	message := "Processing complete"
-
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
@@ -279,13 +278,17 @@ func (v *Video) encodeToMP4() {
 				}
 			}
 		}
-
-		v.pushToWs(message)
-		v.sendToNotifyChan(successful, message)
 	}()
 
 	// This channel is used to wait for the transcoding process to end
-	<-done
+	result := <-done
+	if result != nil {
+		v.pushToWs(result.Error())
+		v.sendToNotifyChan(false, result.Error())
+		return
+	}
+	v.pushToWs(fmt.Sprintf("Encoding successful for id %d", v.ID))
+	v.sendToNotifyChan(true, fmt.Sprintf("Encoding successful for id %d", v.ID))
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
