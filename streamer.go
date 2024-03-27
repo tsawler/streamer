@@ -208,6 +208,8 @@ func (v *Video) encodeToHLS() (*string, error) {
 	return &msg, nil
 }
 
+// createDirIfNotExists creates the output directory, and all required
+// parent directories, if it does not already exist.
 func (v *Video) createDirIfNotExists() error {
 	// Create output directory if it does not exist.
 	const mode = 0755
@@ -220,12 +222,14 @@ func (v *Video) createDirIfNotExists() error {
 	return nil
 }
 
+// pushToWs pushes a message to websocket, if appropriate.
 func (v *Video) pushToWs(msg string) {
 	if v.WebSocket != nil {
 		_ = v.WebSocket.WriteMessage(websocket.TextMessage, []byte(msg))
 	}
 }
 
+// sendToNotifyChan pushes a message down the notify channel.
 func (v *Video) sendToNotifyChan(successful bool, message string) {
 	v.NotifyChan <- ProcessingMessage{
 		ID:         v.ID,
