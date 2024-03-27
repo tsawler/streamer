@@ -251,27 +251,48 @@ func (v *Video) encodeToMP4() (*string, error) {
 	b := path.Base(v.InputFile)
 	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
 	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
+
+	err = trans.Initialize(v.InputFile, outputPath)
+	if err != nil {
+		log.Println(err)
+		successful = false
+		message = "Failed to initialize"
+	}
+
+	// set codec
+	trans.MediaFile().SetVideoCodec("libx264")
+
+	// Start transcoder process with progress checking
+	done := trans.Run(true)
+
 	go func() {
-		err = trans.Initialize(v.InputFile, outputPath)
-		if err != nil {
-			log.Println(err)
-			successful = false
-			message = "Failed to initialize"
+		// Returns a channel to get the transcoding progress
+		progress := trans.Output()
+
+		// Printing transcoding progress to log
+		curProgress := 0
+		oldInt := 0
+
+		for msg := range progress {
+			if int(msg.Progress)%2 == 0 {
+				if oldInt != int(msg.Progress) {
+					// we have moved up 2%
+					curProgress = curProgress + 2
+					oldInt = int(msg.Progress)
+					log.Printf("%d: %d%%\n", v.ID, curProgress)
+					if v.WebSocket != nil {
+						// TODO push to ws
+					}
+				}
+			}
 		}
 
-		// set codec
-		trans.MediaFile().SetVideoCodec("libx264")
-
-		// Start transcoder process with progress checking
-		done := trans.Run(true)
-		err = <-done
-		if err != nil {
-			successful = false
-			message = fmt.Sprintf("failed to create MP$: %v\n", err)
-		}
 		v.pushToWs(message)
 		v.sendToNotifyChan(successful, message)
 	}()
+
+	// This channel is used to wait for the transcoding process to end
+	<-done
 
 	return &outputPath, nil
 }
