@@ -202,7 +202,6 @@ func (v *Video) encodeToHLS() (*string, error) {
 
 		v.pushToWs(message)
 		v.sendToNotifyChan(successful, message)
-
 	}()
 
 	msg := fmt.Sprintf("%s/%s.m3u8", v.OutputDir, baseFileName)
