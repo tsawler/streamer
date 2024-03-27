@@ -1,9 +1,5 @@
 package streamer
 
-import (
-	"fmt"
-)
-
 // VideoProcessingJob is the unit of work to be performed. We wrap this type
 // around a Video, which has all the information we need about the input source
 // and what we want the output to look like.
@@ -18,7 +14,6 @@ func newVideoWorker(id int, workerPool chan chan VideoProcessingJob) videoWorker
 		id:         id,
 		jobQueue:   make(chan VideoProcessingJob),
 		workerPool: workerPool,
-		quitChan:   make(chan bool),
 	}
 }
 
@@ -30,7 +25,6 @@ type videoWorker struct {
 	id         int
 	jobQueue   chan VideoProcessingJob      // Where we send jobs to process.
 	workerPool chan chan VideoProcessingJob // Our worker pool channel.
-	quitChan   chan bool                    // A channel used to quit things.
 }
 
 // start starts a worker.
@@ -43,18 +37,8 @@ func (w videoWorker) start() {
 			select {
 			case job := <-w.jobQueue:
 				w.processVideoJob(job.Video)
-			case <-w.quitChan:
-				fmt.Printf("worker%d stopping\n", w.id)
-				return
 			}
 		}
-	}()
-}
-
-// stop stops a worker.
-func (w videoWorker) stop() {
-	go func() {
-		w.quitChan <- true
 	}()
 }
 
