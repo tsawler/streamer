@@ -121,7 +121,7 @@ func (v *Video) encodeToHLSEncrypted() {
 			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
 		)
 
-		_, err := ffmpegCmd.CombinedOutput()
+		_, err = ffmpegCmd.CombinedOutput()
 		if err != nil {
 			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
 			v.sendToNotifyChan(false, err.Error())
@@ -189,7 +189,7 @@ func (v *Video) encodeToHLS() {
 			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
 		)
 
-		_, err := ffmpegCmd.CombinedOutput()
+		_, err = ffmpegCmd.CombinedOutput()
 		if err != nil {
 			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
 			v.sendToNotifyChan(false, err.Error())
