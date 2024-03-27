@@ -74,5 +74,5 @@ func (d *VideoDispatcher) dispatch() {
 
 // processVideoJob processes the main queue job.
 func (w videoWorker) processVideoJob(video Video) {
-	_, _ = video.encode()
+	video.encode()
 }

@@ -1,7 +1,6 @@
 package streamer
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/tsawler/signer"
@@ -48,30 +47,31 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 }
 
 // encode allows us to encode the source file to one of the supported formats.
-func (v *Video) encode() (*string, error) {
+func (v *Video) encode() {
 	v.pushToWs(fmt.Sprintf("Processing started for %d", v.ID))
 
 	switch v.EncodingType {
 	case "mp4":
-		return v.encodeToMP4()
+		v.encodeToMP4()
 	case "hls":
-		return v.encodeToHLS()
+		v.encodeToHLS()
 	case "hls-encrypted":
-		return v.encodeToHLSEncrypted()
+		v.encodeToHLSEncrypted()
 	default:
 		v.pushToWs(fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
-		return nil, errors.New("invalid encoding type")
+		v.sendToNotifyChan(false, fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 	}
 }
 
 // encodeToHLSEncrypted takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir. The resulting files are encrypted.
-func (v *Video) encodeToHLSEncrypted() (*string, error) {
+func (v *Video) encodeToHLSEncrypted() {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		return nil, err
+		v.sendToNotifyChan(false, err.Error())
+		return
 	}
 
 	// Get base filename.
@@ -120,31 +120,26 @@ func (v *Video) encodeToHLSEncrypted() (*string, error) {
 			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
 		)
 
-		output, err := ffmpegCmd.CombinedOutput()
-		successful := true
-		message := "Processing complete"
+		_, err := ffmpegCmd.CombinedOutput()
 		if err != nil {
-			successful = false
-			message = fmt.Sprintf("failed to create HLS: %v\nOutput: %s", err, string(output))
+			v.sendToNotifyChan(false, err.Error())
+			return
 		}
 
-		v.pushToWs(message)
-		v.sendToNotifyChan(successful, message)
-
+		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
+		v.sendToNotifyChan(true, fmt.Sprintf("Processing complete for id %d", v.ID))
 	}()
-
-	msg := fmt.Sprintf("%s/%s.m3u8", v.OutputDir, baseFileName)
-	return &msg, nil
 }
 
 // encodeToHLS takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir.
-func (v *Video) encodeToHLS() (*string, error) {
+func (v *Video) encodeToHLS() {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		return nil, err
+		v.sendToNotifyChan(false, err.Error())
+		return
 	}
 
 	// Get base filename.
@@ -192,20 +187,15 @@ func (v *Video) encodeToHLS() (*string, error) {
 			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
 		)
 
-		output, err := ffmpegCmd.CombinedOutput()
-		successful := true
-		message := "Processing complete"
+		_, err := ffmpegCmd.CombinedOutput()
 		if err != nil {
-			successful = false
-			message = fmt.Sprintf("failed to create HLS: %v\nOutput: %s", err, string(output))
+			v.sendToNotifyChan(false, err.Error())
+			return
 		}
 
-		v.pushToWs(message)
-		v.sendToNotifyChan(successful, message)
+		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
+		v.sendToNotifyChan(true, fmt.Sprintf("Processing complete for id %d", v.ID))
 	}()
-
-	msg := fmt.Sprintf("%s/%s.m3u8", v.OutputDir, baseFileName)
-	return &msg, nil
 }
 
 // createDirIfNotExists creates the output directory, and all required
@@ -240,14 +230,15 @@ func (v *Video) sendToNotifyChan(successful bool, message string) {
 
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
-func (v *Video) encodeToMP4() (*string, error) {
+func (v *Video) encodeToMP4() {
 	successful := true
 	message := "Processing complete"
 
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		return nil, err
+		v.sendToNotifyChan(false, err.Error())
+		return
 	}
 
 	trans := new(transcoder.Transcoder)
@@ -257,9 +248,8 @@ func (v *Video) encodeToMP4() (*string, error) {
 
 	err = trans.Initialize(v.InputFile, outputPath)
 	if err != nil {
-		log.Println(err)
-		successful = false
-		message = "Failed to initialize"
+		v.sendToNotifyChan(false, err.Error())
+		return
 	}
 
 	// set codec
@@ -296,8 +286,6 @@ func (v *Video) encodeToMP4() (*string, error) {
 
 	// This channel is used to wait for the transcoding process to end
 	<-done
-
-	return &outputPath, nil
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
