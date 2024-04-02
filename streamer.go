@@ -32,7 +32,7 @@ type Video struct {
 type ProcessingMessage struct {
 	ID         int    `json:"id"`         // The ID of the video.
 	Successful bool   `json:"successful"` // True if successfully encoded.
-	Message    string `json: "message"`   // A human-readable message.
+	Message    string `json:"message"`    // A human-readable message.
 }
 
 // ToJSON marshals the receiver, pm, to JSON and returns a slice of bytes.
