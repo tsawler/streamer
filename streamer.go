@@ -26,14 +26,23 @@ type Video struct {
 	KeyInfo         string                 // For encrypted HLS, the key info file.
 	EncodingType    string                 // mp4, hls, or hls-encrypted.
 	WebSocket       *websocket.Conn        // An (optional) websocket connection to send messages around.
-
 }
 
 // ProcessingMessage is the information sent back to the client.
 type ProcessingMessage struct {
-	ID         int    // The ID of the video.
-	Successful bool   // True if successfully encoded.
-	Message    string // A human-readable message.
+	ID         int    `json:"id"`         // The ID of the video.
+	Successful bool   `json:"successful"` // True if successfully encoded.
+	Message    string `json: "message"`   // A human-readable message.
+}
+
+// ToJSON marshals the receiver, pm, to JSON and returns a slice of bytes.
+func (pm *ProcessingMessage) ToJSON() ([]byte, error) {
+	b, err := json.Marshal(pm)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 // New creates and returns a new worker pool.
