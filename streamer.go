@@ -15,17 +15,43 @@ import (
 	"strings"
 )
 
-// Video is the type for videos we want to work with.
+// Video is the type for a video that we wish to process.
 type Video struct {
 	ID              int                    // An arbitrary ID for the video.
 	InputFile       string                 // The path to the input file.
 	OutputDir       string                 // The path to the output directory.
-	SegmentDuration int                    // If HLS, how long should segments be in seconds?
 	NotifyChan      chan ProcessingMessage // A channel to receive the output message.
 	Secret          string                 // For encrypted HLS, the name of the file with the secret.
 	KeyInfo         string                 // For encrypted HLS, the key info file.
 	EncodingType    string                 // mp4, hls, or hls-encrypted.
 	WebSocket       *websocket.Conn        // An (optional) websocket connection to send messages around.
+	SegmentDuration int                    // If HLS, how long should segments be in seconds?
+	MaxRate1080p    string                 // The Maximum rate for 1080p encoding.
+	MaxRate720p     string                 // The Maximum rate for 720p encoding.
+	MaxRate480p     string                 // The Maximum rate for 480p encoding.
+}
+
+// NewVideo is a convenience factory method for creating video objects with
+// sensible default values.
+func NewVideo(encType, max1080, max720, max480 string) Video {
+	if max1080 == "" {
+		max1080 = "1200k"
+	}
+	if max720 == "" {
+		max720 = "600k"
+	}
+	if max480 == "" {
+		max480 = "400k"
+	}
+	if encType == "" {
+		encType = "mp4"
+	}
+	return Video{
+		EncodingType: encType,
+		MaxRate1080p: max1080,
+		MaxRate720p:  max720,
+		MaxRate480p:  max480,
+	}
 }
 
 // ProcessingMessage is the information sent back to the client.
@@ -103,13 +129,13 @@ func (v *Video) encodeToHLSEncrypted() {
 			"-c:a", "aac",
 			"-ar", "48000",
 			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", "1200k",
-			"-b:a:0", "64k",
+			"-maxrate:v:0", v.MaxRate1080p,
+			"-b:a:0", "128k",
 			"-filter:v:1", "scale=-2:720",
-			"-maxrate:v:1", "600k",
+			"-maxrate:v:1", v.MaxRate720p,
 			"-b:a:1", "128k",
 			"-filter:v:2", "scale=-2:480",
-			"-maxrate:v:2", "400k",
+			"-maxrate:v:2", v.MaxRate480p,
 			"-b:a:2", "64k",
 			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
 			"-preset", "slow",
@@ -172,8 +198,8 @@ func (v *Video) encodeToHLS() {
 			"-c:a", "aac",
 			"-ar", "48000",
 			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", "1200k",
-			"-b:a:0", "64k",
+			"-maxrate:v:0", v.MaxRate1080p,
+			"-b:a:0", "128k",
 			"-filter:v:1", "scale=-2:720",
 			"-maxrate:v:1", "600k",
 			"-b:a:1", "128k",
