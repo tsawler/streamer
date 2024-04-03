@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/tsawler/signer"
+	"github.com/tsawler/toolbox"
 	"github.com/xfrr/goffmpeg/transcoder"
 	"log"
 	"os"
@@ -21,6 +22,7 @@ type Video struct {
 	InputFile       string                 // The path to the input file.
 	OutputDir       string                 // The path to the output directory.
 	NotifyChan      chan ProcessingMessage // A channel to receive the output message.
+	RenameOutput    bool                   // If true, generate random name for output file.
 	Secret          string                 // For encrypted HLS, the name of the file with the secret.
 	KeyInfo         string                 // For encrypted HLS, the key info file.
 	EncodingType    string                 // mp4, hls, or hls-encrypted.
@@ -33,7 +35,7 @@ type Video struct {
 
 // NewVideo is a convenience factory method for creating video objects with
 // sensible default values.
-func NewVideo(encType, max1080, max720, max480 string) Video {
+func NewVideo(encType, max1080, max720, max480 string, rename ...bool) Video {
 	if max1080 == "" {
 		max1080 = "1200k"
 	}
@@ -46,11 +48,16 @@ func NewVideo(encType, max1080, max720, max480 string) Video {
 	if encType == "" {
 		encType = "mp4"
 	}
+	renameFile := false
+	if len(rename) > 0 {
+		renameFile = rename[0]
+	}
 	return Video{
 		EncodingType: encType,
 		MaxRate1080p: max1080,
 		MaxRate720p:  max720,
 		MaxRate480p:  max480,
+		RenameOutput: renameFile,
 	}
 }
 
@@ -110,9 +117,16 @@ func (v *Video) encodeToHLSEncrypted() {
 		return
 	}
 
-	// Get base filename.
-	b := path.Base(v.InputFile)
-	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
+	baseFileName := ""
+
+	if !v.RenameOutput {
+		// Get base filename.
+		b := path.Base(v.InputFile)
+		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
+	} else {
+		var t toolbox.Tools
+		baseFileName = t.RandomString(10)
+	}
 
 	go func() {
 		ffmpegCmd := exec.Command(
@@ -179,9 +193,16 @@ func (v *Video) encodeToHLS() {
 		return
 	}
 
-	// Get base filename.
-	b := path.Base(v.InputFile)
-	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
+	baseFileName := ""
+
+	if !v.RenameOutput {
+		// Get base filename.
+		b := path.Base(v.InputFile)
+		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
+	} else {
+		var t toolbox.Tools
+		baseFileName = t.RandomString(10)
+	}
 
 	go func() {
 		ffmpegCmd := exec.Command(
@@ -287,8 +308,18 @@ func (v *Video) encodeToMP4() {
 	}
 
 	trans := new(transcoder.Transcoder)
-	b := path.Base(v.InputFile)
-	baseFileName := strings.TrimSuffix(b, filepath.Ext(b))
+
+	baseFileName := ""
+
+	if !v.RenameOutput {
+		// Get base filename.
+		b := path.Base(v.InputFile)
+		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
+	} else {
+		var t toolbox.Tools
+		baseFileName = t.RandomString(10)
+	}
+
 	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
 
 	err = trans.Initialize(v.InputFile, outputPath)
