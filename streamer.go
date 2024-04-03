@@ -63,9 +63,10 @@ func NewVideo(encType, max1080, max720, max480 string, rename ...bool) Video {
 
 // ProcessingMessage is the information sent back to the client.
 type ProcessingMessage struct {
-	ID         int    `json:"id"`         // The ID of the video.
-	Successful bool   `json:"successful"` // True if successfully encoded.
-	Message    string `json:"message"`    // A human-readable message.
+	ID         int    `json:"id"`          // The ID of the video.
+	Successful bool   `json:"successful"`  // True if successfully encoded.
+	Message    string `json:"message"`     // A human-readable message.
+	OutputFile string `json:"output_file"` // The name of the generated file.
 }
 
 // ToJSON marshals the receiver, pm, to JSON and returns a slice of bytes.
@@ -102,7 +103,7 @@ func (v *Video) encode() {
 		v.encodeToHLSEncrypted()
 	default:
 		v.pushToWs(fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
-		v.sendToNotifyChan(false, fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
+		v.sendToNotifyChan(false, "", fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 	}
 }
 
@@ -113,7 +114,7 @@ func (v *Video) encodeToHLSEncrypted() {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, err.Error())
+		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
@@ -173,12 +174,12 @@ func (v *Video) encodeToHLSEncrypted() {
 		_, err = ffmpegCmd.CombinedOutput()
 		if err != nil {
 			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
-			v.sendToNotifyChan(false, err.Error())
+			v.sendToNotifyChan(false, "", err.Error())
 			return
 		}
 
 		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
-		v.sendToNotifyChan(true, fmt.Sprintf("Processing complete for id %d", v.ID))
+		v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 	}()
 }
 
@@ -189,7 +190,7 @@ func (v *Video) encodeToHLS() {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, err.Error())
+		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
@@ -248,12 +249,12 @@ func (v *Video) encodeToHLS() {
 		_, err = ffmpegCmd.CombinedOutput()
 		if err != nil {
 			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
-			v.sendToNotifyChan(false, err.Error())
+			v.sendToNotifyChan(false, "", err.Error())
 			return
 		}
 
 		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
-		v.sendToNotifyChan(true, fmt.Sprintf("Processing complete for id %d", v.ID))
+		v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 	}()
 }
 
@@ -289,11 +290,12 @@ func (v *Video) pushJSONToWs(payload map[string]string) {
 }
 
 // sendToNotifyChan pushes a message down the notify channel.
-func (v *Video) sendToNotifyChan(successful bool, message string) {
+func (v *Video) sendToNotifyChan(successful bool, fileName, message string) {
 	v.NotifyChan <- ProcessingMessage{
 		ID:         v.ID,
 		Successful: successful,
 		Message:    message,
+		OutputFile: fileName,
 	}
 }
 
@@ -303,7 +305,7 @@ func (v *Video) encodeToMP4() {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, err.Error())
+		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
@@ -324,7 +326,7 @@ func (v *Video) encodeToMP4() {
 
 	err = trans.Initialize(v.InputFile, outputPath)
 	if err != nil {
-		v.sendToNotifyChan(false, err.Error())
+		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
@@ -366,11 +368,11 @@ func (v *Video) encodeToMP4() {
 	result := <-done
 	if result != nil {
 		v.pushToWs(result.Error())
-		v.sendToNotifyChan(false, result.Error())
+		v.sendToNotifyChan(false, "", result.Error())
 		return
 	}
 	v.pushToWs(fmt.Sprintf("Encoding successful for id %d", v.ID))
-	v.sendToNotifyChan(true, fmt.Sprintf("Encoding successful for id %d", v.ID))
+	v.sendToNotifyChan(true, fmt.Sprintf("%s.mp4", baseFileName), fmt.Sprintf("Encoding successful for id %d", v.ID))
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
