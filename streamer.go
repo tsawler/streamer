@@ -33,6 +33,183 @@ type Video struct {
 	MaxRate480p     string                 // The Maximum rate for 480p encoding.
 }
 
+type Encoder interface {
+	EncodeToMP4(v *Video, baseFileName string) error
+	EncodeToHLS(v *Video) error
+	EncodeToHLSEncrypted(v *Video)
+}
+
+type VideoEncoder struct{}
+
+func (ve *VideoEncoder) EncodeToMP4(v *Video, baseFileName string) error {
+	trans := new(transcoder.Transcoder)
+
+	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
+
+	err := trans.Initialize(v.InputFile, outputPath)
+	if err != nil {
+		return err
+	}
+
+	// set codec
+	trans.MediaFile().SetVideoCodec("libx264")
+
+	// Start transcoder process with progress checking
+	done := trans.Run(true)
+
+	go func() {
+		// Returns a channel to get the transcoding progress
+		progress := trans.Output()
+
+		// Printing transcoding progress to log
+		curProgress := 0
+		oldInt := 0
+
+		for msg := range progress {
+			if int(msg.Progress)%2 == 0 {
+				if oldInt != int(msg.Progress) {
+					// we have moved up 2%
+					curProgress = curProgress + 2
+					oldInt = int(msg.Progress)
+					log.Printf("%d: %d%%\n", v.ID, curProgress)
+
+					data := map[string]string{
+						"message":  "progress",
+						"video_id": fmt.Sprintf("%d", v.ID),
+						"percent":  fmt.Sprintf("%d", int(msg.Progress)),
+					}
+					v.pushJSONToWs(data)
+					v.pushToWs(fmt.Sprintf("%d", int(msg.Progress)))
+				}
+			}
+		}
+	}()
+
+	// This channel is used to wait for the transcoding process to end
+	err = <-done
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ve *VideoEncoder) EncodeToHLS(v *Video, baseFileName string) error {
+	result := make(chan error)
+
+	go func(result chan error) {
+		ffmpegCmd := exec.Command(
+			"ffmpeg",
+			"-i", v.InputFile,
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-c:v", "libx264",
+			"-crf", "22",
+			"-c:a", "aac",
+			"-ar", "48000",
+			"-filter:v:0", "scale=-2:1080",
+			"-maxrate:v:0", v.MaxRate1080p,
+			"-b:a:0", "128k",
+			"-filter:v:1", "scale=-2:720",
+			"-maxrate:v:1", v.MaxRate720p,
+			"-b:a:1", "128k",
+			"-filter:v:2", "scale=-2:480",
+			"-maxrate:v:2", v.MaxRate480p,
+			"-b:a:2", "64k",
+			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
+			"-preset", "slow",
+			"-hls_list_size", "0",
+			"-threads", "0",
+			"-f", "hls",
+			"-hls_playlist_type", "event",
+			"-hls_time", strconv.Itoa(v.SegmentDuration),
+			"-hls_flags", "independent_segments",
+			"-hls_segment_type", "mpegts",
+			"-hls_playlist_type", "vod",
+			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
+			"-profile:v", "baseline", // baseline profile is compatible with most devices
+			"-level", "3.0",
+			"-progress", "-",
+			"-nostats",
+			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
+		)
+
+		_, err := ffmpegCmd.CombinedOutput()
+		result <- err
+	}(result)
+
+	err := <-result
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error {
+	result := make(chan error)
+
+	go func(result chan error) {
+		ffmpegCmd := exec.Command(
+			"ffmpeg",
+			"-i", v.InputFile,
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-map", "0:v:0",
+			"-map", "0:a:0",
+			"-c:v", "libx264",
+			"-crf", "22",
+			"-c:a", "aac",
+			"-ar", "48000",
+			"-filter:v:0", "scale=-2:1080",
+			"-maxrate:v:0", v.MaxRate1080p,
+			"-b:a:0", "128k",
+			"-filter:v:1", "scale=-2:720",
+			"-maxrate:v:1", v.MaxRate720p,
+			"-b:a:1", "128k",
+			"-filter:v:2", "scale=-2:480",
+			"-maxrate:v:2", v.MaxRate480p,
+			"-b:a:2", "64k",
+			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
+			"-preset", "slow",
+			"-hls_list_size", "0",
+			"-threads", "0",
+			"-f", "hls",
+			"-hls_playlist_type", "event",
+			"-hls_time", strconv.Itoa(v.SegmentDuration),
+			"-hls_flags", "independent_segments",
+			"-hls_segment_type", "mpegts",
+			"-hls_key_info_file", v.KeyInfo,
+			"-hls_playlist_type", "vod",
+			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
+			"-profile:v", "baseline", // baseline profile is compatible with most devices
+			"-level", "3.0",
+			"-progress", "-",
+			"-nostats",
+			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
+		)
+
+		log.Println("Command:", ffmpegCmd.String())
+
+		_, err := ffmpegCmd.CombinedOutput()
+		result <- err
+	}(result)
+
+	err := <-result
+	if err != nil {
+		log.Println("Error encoding encrypted:", err.Error())
+		return err
+	}
+
+	return nil
+}
+
 // NewVideo is a convenience factory method for creating video objects with
 // sensible default values.
 func NewVideo(encType, max1080, max720, max480 string, rename ...bool) Video {
@@ -129,58 +306,16 @@ func (v *Video) encodeToHLSEncrypted() {
 		baseFileName = t.RandomString(10)
 	}
 
-	go func() {
-		ffmpegCmd := exec.Command(
-			"ffmpeg",
-			"-i", v.InputFile,
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-c:v", "libx264",
-			"-crf", "22",
-			"-c:a", "aac",
-			"-ar", "48000",
-			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", v.MaxRate1080p,
-			"-b:a:0", "128k",
-			"-filter:v:1", "scale=-2:720",
-			"-maxrate:v:1", v.MaxRate720p,
-			"-b:a:1", "128k",
-			"-filter:v:2", "scale=-2:480",
-			"-maxrate:v:2", v.MaxRate480p,
-			"-b:a:2", "64k",
-			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
-			"-preset", "slow",
-			"-hls_list_size", "0",
-			"-threads", "0",
-			"-f", "hls",
-			"-hls_playlist_type", "event",
-			"-hls_time", strconv.Itoa(v.SegmentDuration),
-			"-hls_flags", "independent_segments",
-			"-hls_segment_type", "mpegts",
-			"-hls_key_info_file", v.KeyInfo,
-			"-hls_playlist_type", "vod",
-			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
-			"-profile:v", "baseline", // baseline profile is compatible with most devices
-			"-level", "3.0",
-			"-progress", "-",
-			"-nostats",
-			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
-		)
+	var ve VideoEncoder
+	err = ve.EncodeToHLSEncrypted(v, baseFileName)
+	if err != nil {
+		v.pushToWs(fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
+		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
+		return
+	}
 
-		_, err = ffmpegCmd.CombinedOutput()
-		if err != nil {
-			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
-			v.sendToNotifyChan(false, "", err.Error())
-			return
-		}
-
-		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
-		v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
-	}()
+	v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
+	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 }
 
 // encodeToHLS takes input file, from receiver v.InputFile, and encodes to HLS format
@@ -205,57 +340,17 @@ func (v *Video) encodeToHLS() {
 		baseFileName = t.RandomString(10)
 	}
 
-	go func() {
-		ffmpegCmd := exec.Command(
-			"ffmpeg",
-			"-i", v.InputFile,
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-map", "0:v:0",
-			"-map", "0:a:0",
-			"-c:v", "libx264",
-			"-crf", "22",
-			"-c:a", "aac",
-			"-ar", "48000",
-			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", v.MaxRate1080p,
-			"-b:a:0", "128k",
-			"-filter:v:1", "scale=-2:720",
-			"-maxrate:v:1", v.MaxRate720p,
-			"-b:a:1", "128k",
-			"-filter:v:2", "scale=-2:480",
-			"-maxrate:v:2", v.MaxRate480p,
-			"-b:a:2", "64k",
-			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
-			"-preset", "slow",
-			"-hls_list_size", "0",
-			"-threads", "0",
-			"-f", "hls",
-			"-hls_playlist_type", "event",
-			"-hls_time", strconv.Itoa(v.SegmentDuration),
-			"-hls_flags", "independent_segments",
-			"-hls_segment_type", "mpegts",
-			"-hls_playlist_type", "vod",
-			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
-			"-profile:v", "baseline", // baseline profile is compatible with most devices
-			"-level", "3.0",
-			"-progress", "-",
-			"-nostats",
-			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
-		)
+	var ve VideoEncoder
 
-		_, err = ffmpegCmd.CombinedOutput()
-		if err != nil {
-			v.pushToWs(fmt.Sprintf("Processing failed for id %d: %s", v.ID, err.Error()))
-			v.sendToNotifyChan(false, "", err.Error())
-			return
-		}
+	err = ve.EncodeToHLS(v, baseFileName)
+	if err != nil {
+		v.pushToWs(fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
+		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
+		return
+	}
 
-		v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
-		v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
-	}()
+	v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
+	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 }
 
 // createDirIfNotExists creates the output directory, and all required
@@ -309,8 +404,6 @@ func (v *Video) encodeToMP4() {
 		return
 	}
 
-	trans := new(transcoder.Transcoder)
-
 	baseFileName := ""
 
 	if !v.RenameOutput {
@@ -322,55 +415,14 @@ func (v *Video) encodeToMP4() {
 		baseFileName = t.RandomString(10)
 	}
 
-	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
-
-	err = trans.Initialize(v.InputFile, outputPath)
+	var ve VideoEncoder
+	err = ve.EncodeToMP4(v, baseFileName)
 	if err != nil {
+		v.pushToWs(err.Error())
 		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
-	// set codec
-	trans.MediaFile().SetVideoCodec("libx264")
-
-	// Start transcoder process with progress checking
-	done := trans.Run(true)
-
-	go func() {
-		// Returns a channel to get the transcoding progress
-		progress := trans.Output()
-
-		// Printing transcoding progress to log
-		curProgress := 0
-		oldInt := 0
-
-		for msg := range progress {
-			if int(msg.Progress)%2 == 0 {
-				if oldInt != int(msg.Progress) {
-					// we have moved up 2%
-					curProgress = curProgress + 2
-					oldInt = int(msg.Progress)
-					log.Printf("%d: %d%%\n", v.ID, curProgress)
-
-					data := map[string]string{
-						"message":  "progress",
-						"video_id": fmt.Sprintf("%d", v.ID),
-						"percent":  fmt.Sprintf("%d", int(msg.Progress)),
-					}
-					v.pushJSONToWs(data)
-					v.pushToWs(fmt.Sprintf("%d", int(msg.Progress)))
-				}
-			}
-		}
-	}()
-
-	// This channel is used to wait for the transcoding process to end
-	result := <-done
-	if result != nil {
-		v.pushToWs(result.Error())
-		v.sendToNotifyChan(false, "", result.Error())
-		return
-	}
 	v.pushToWs(fmt.Sprintf("Encoding successful for id %d", v.ID))
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.mp4", baseFileName), fmt.Sprintf("Encoding successful for id %d", v.ID))
 }
