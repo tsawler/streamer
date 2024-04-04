@@ -41,7 +41,7 @@ func main() {
 	defer close(videoQueue)
 
 	// Get a new streamer (worker pool).
-	wp := streamer.New(videoQueue, 2)
+	wp := streamer.New(videoQueue, 3)
 
 	// Start the worker pool.
 	wp.Run()
@@ -81,7 +81,7 @@ func main() {
 
 	// Create a fourth video object that's encrypted.
 	video4 := streamer.Video{
-		ID:           3,
+		ID:           4,
 		InputFile:    "./upload/j.mp4",
 		OutputDir:    "./output",
 		NotifyChan:   notifyChan,
@@ -91,6 +91,7 @@ func main() {
 		MaxRate1080p: "2400k",
 		MaxRate720p:  "1200k",
 		MaxRate480p:  "800k",
+		RenameOutput: true,
 	}
 
 	log.Println("Starting encode.")
@@ -105,8 +106,12 @@ func main() {
 
 	for i := 0; i < 4; i++ {
 		msg := <-notifyChan
-		fmt.Printf("Video ID #%d finished: %s.\n", msg.ID, msg.Message)
-		fmt.Printf("Output file for video ID #%d: %s.\n", msg.ID, msg.OutputFile)
+		if msg.Successful {
+			fmt.Printf("Video ID #%d finished: %s.\n", msg.ID, msg.Message)
+			fmt.Printf("Output file for video ID #%d: %s.\n", msg.ID, msg.OutputFile)
+		} else {
+			fmt.Printf("Video ID #%d failed: %s\n", msg.ID, msg.Message)
+		}
 	}
 
 	fmt.Println("Done!")

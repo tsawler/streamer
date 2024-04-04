@@ -195,8 +195,6 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 			fmt.Sprintf("%s/%s-%%v.m3u8", v.OutputDir, baseFileName),
 		)
 
-		log.Println("Command:", ffmpegCmd.String())
-
 		_, err := ffmpegCmd.CombinedOutput()
 		result <- err
 	}(result)
