@@ -49,20 +49,48 @@ func main() {
 	// Create a Video object for processing.
 	video := streamer.Video{
 		ID:              1,                // Arbitrary id of video.
-		InputFile:       "./upload/k.mp4", // Where is the file to encode?
+		InputFile:       "./upload/j.mp4", // Where is the file to encode?
 		OutputDir:       "./output",       // Where to create output file(s).
 		SegmentDuration: 10,               // Duration of segments, in seconds (hls & hls-encrypted only).
 		NotifyChan:      notifyChan,       // The channel to send notifications to.
 		EncodingType:    "hls",            // Can be hls, mp4, or hls-encrypted.
+		MaxRate1080p:    "2400k",
+		MaxRate720p:     "1200k",
+		MaxRate480p:     "800k",
 	}
-
+	//
 	// Create a second Video object for processing.
 	video2 := streamer.Video{
 		ID:           2,
-		InputFile:    "./upload/j.mp4",
+		InputFile:    "./upload/k.mp4",
 		OutputDir:    "./output",
 		NotifyChan:   notifyChan,
 		EncodingType: "mp4",
+		RenameOutput: true,
+	}
+
+	// Create a third video object that should fail, since
+	// input is not a valid video file.
+	video3 := streamer.Video{
+		ID:           3,
+		InputFile:    "./upload/i.srt",
+		OutputDir:    "./output",
+		NotifyChan:   notifyChan,
+		EncodingType: "mp4",
+	}
+
+	// Create a fourth video object that's encrypted.
+	video4 := streamer.Video{
+		ID:           3,
+		InputFile:    "./upload/j.mp4",
+		OutputDir:    "./output",
+		NotifyChan:   notifyChan,
+		EncodingType: "hls-encrypted",
+		KeyInfo:      "./keys/enc.keyinfo",
+		Secret:       "enc.key",
+		MaxRate1080p: "2400k",
+		MaxRate720p:  "1200k",
+		MaxRate480p:  "800k",
 	}
 
 	log.Println("Starting encode.")
@@ -70,12 +98,15 @@ func main() {
 	// Send videos to worker pool via channel.
 	videoQueue <- streamer.VideoProcessingJob{Video: video}
 	videoQueue <- streamer.VideoProcessingJob{Video: video2}
+	videoQueue <- streamer.VideoProcessingJob{Video: video3}
+	videoQueue <- streamer.VideoProcessingJob{Video: video4}
 
 	log.Println("Waiting for results...")
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 4; i++ {
 		msg := <-notifyChan
 		fmt.Printf("Video ID #%d finished: %s.\n", msg.ID, msg.Message)
+		fmt.Printf("Output file for video ID #%d: %s.\n", msg.ID, msg.OutputFile)
 	}
 
 	fmt.Println("Done!")
