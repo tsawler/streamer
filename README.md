@@ -33,7 +33,7 @@ import (
 
 func main() {
 	// Create a channel to receive notifications.
-	notifyChan := make(chan streamer.ProcessingMessage)
+	notifyChan := make(chan streamer.ProcessingMessage, 10)
 	defer close(notifyChan)
 
 	// Create a channel to send work to.
@@ -46,53 +46,23 @@ func main() {
 	// Start the worker pool.
 	wp.Run()
 
-	// Create a Video object for processing.
-	video := streamer.Video{
-		ID:              1,                // Arbitrary id of video.
-		InputFile:       "./upload/j.mp4", // Where is the file to encode?
-		OutputDir:       "./output",       // Where to create output file(s).
-		SegmentDuration: 10,               // Duration of segments, in seconds (hls & hls-encrypted only).
-		NotifyChan:      notifyChan,       // The channel to send notifications to.
-		EncodingType:    "hls",            // Can be hls, mp4, or hls-encrypted.
-		MaxRate1080p:    "2400k",
-		MaxRate720p:     "1200k",
-		MaxRate480p:     "800k",
-	}
-	//
-	// Create a second Video object for processing.
-	video2 := streamer.Video{
-		ID:           2,
-		InputFile:    "./upload/k.mp4",
-		OutputDir:    "./output",
-		NotifyChan:   notifyChan,
-		EncodingType: "mp4",
-		RenameOutput: true,
-	}
+	// Create a video that converts mp4 to web ready mp4.
+	video := wp.NewVideo(1, "./upload/puppy1.mp4", "./output", "mp4", notifyChan, nil)
 
-	// Create a third video object that should fail, since
-	// input is not a valid video file.
-	video3 := streamer.Video{
-		ID:           3,
-		InputFile:    "./upload/i.srt",
-		OutputDir:    "./output",
-		NotifyChan:   notifyChan,
-		EncodingType: "mp4",
-	}
+	// Create a second video object that should fail, since input is not a valid video file.
+	video2 := wp.NewVideo(2, "./upload/i.srt", "./output", "mp4", notifyChan, nil)
 
-	// Create a fourth video object that's encrypted.
-	video4 := streamer.Video{
-		ID:           4,
-		InputFile:    "./upload/j.mp4",
-		OutputDir:    "./output",
-		NotifyChan:   notifyChan,
-		EncodingType: "hls-encrypted",
-		KeyInfo:      "./keys/enc.keyinfo",
-		Secret:       "enc.key",
-		MaxRate1080p: "2400k",
-		MaxRate720p:  "1200k",
-		MaxRate480p:  "800k",
-		RenameOutput: true,
+	// Create a third video object, encoding to HLS.
+	video3 := wp.NewVideo(3, "./upload/puppy2.mp4", "./output", "hls", notifyChan, nil)
+
+	// Create a fourth video object, encoding to HLS encrypted.
+	ops := &streamer.VideoOptions{
+		RenameOutput:    true,
+		Secret:          "enc.key",
+		KeyInfo:         "./keys/enc.keyinfo",
+		SegmentDuration: 10,
 	}
+	video4 := wp.NewVideo(4, "./upload/puppy2.mp4", "./output", "hls-encrypted", notifyChan, ops)
 
 	log.Println("Starting encode.")
 
@@ -106,12 +76,7 @@ func main() {
 
 	for i := 0; i < 4; i++ {
 		msg := <-notifyChan
-		if msg.Successful {
-			fmt.Printf("Video ID #%d finished: %s.\n", msg.ID, msg.Message)
-			fmt.Printf("Output file for video ID #%d: %s.\n", msg.ID, msg.OutputFile)
-		} else {
-			fmt.Printf("Video ID #%d failed: %s\n", msg.ID, msg.Message)
-		}
+		log.Println("i:", i, "msg:", msg)
 	}
 
 	fmt.Println("Done!")
