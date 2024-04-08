@@ -61,25 +61,19 @@ func TestNewVideo(t *testing.T) {
 	}
 }
 
-type TestEncoder struct{}
+func Test_encodeToMP4(t *testing.T) {
+	wp := New(make(chan VideoProcessingJob), 1)
+	v := wp.NewVideo(1, "./testdata/i.mp4", "./testdata/output", "mp4", testNotifyChan, nil)
+	v.Encoder = testProcessor
 
-// EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
-func (ve *TestEncoder) EncodeToMP4(v *Video, baseFileName string) error {
-	return nil
+	err := v.encodeToMP4()
+	if err != nil {
+		t.Error("encode to mp4 failed", err)
+		return
+	}
+
+	result := <-testNotifyChan
+	if !result.Successful {
+		t.Error("encoding failed")
+	}
 }
-
-// EncodeToHLS takes a Video object and a base file name, and encodes to HLS format.
-func (ve *TestEncoder) EncodeToHLS(v *Video, baseFileName string) error {
-	return nil
-}
-
-// EncodeToHLSEncrypted takes a Video object and a base file name, and encodes to encrypted HLS format.
-func (ve *TestEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error {
-	return nil
-}
-
-//func Test_encodeToMP4(t *testing.T) {
-//	var te TestEncoder
-//	VE = te
-//	err :=
-//}

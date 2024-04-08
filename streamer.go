@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/tsawler/signer"
 	"github.com/tsawler/toolbox"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -68,18 +67,18 @@ type VideoOptions struct {
 
 // NewVideo is a convenience factory method for creating video objects with
 // sensible default values.
-func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notifyChan chan ProcessingMessage, options *VideoOptions) Video {
-	if options == nil {
-		options = &VideoOptions{}
+func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notifyChan chan ProcessingMessage, ops *VideoOptions) Video {
+	if ops == nil {
+		ops = &VideoOptions{}
 	}
-	if options.MaxRate1080p == "" {
-		options.MaxRate1080p = "1200k"
+	if ops.MaxRate1080p == "" {
+		ops.MaxRate1080p = "1200k"
 	}
-	if options.MaxRate720p == "" {
-		options.MaxRate720p = "600k"
+	if ops.MaxRate720p == "" {
+		ops.MaxRate720p = "600k"
 	}
-	if options.MaxRate480p == "" {
-		options.MaxRate480p = "400k"
+	if ops.MaxRate480p == "" {
+		ops.MaxRate480p = "400k"
 	}
 	if encType == "" {
 		encType = "mp4"
@@ -91,7 +90,7 @@ func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notif
 		EncodingType: encType,
 		NotifyChan:   notifyChan,
 		Encoder:      vd.Processor,
-		Options:      options,
+		Options:      ops,
 	}
 }
 
@@ -99,7 +98,10 @@ func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notif
 func (v *Video) encode() {
 	switch v.EncodingType {
 	case "mp4":
-		v.encodeToMP4()
+		err := v.encodeToMP4()
+		if err != nil {
+			v.sendToNotifyChan(false, "", fmt.Sprintf("error processing %d: %s", v.ID, err.Error()))
+		}
 	case "hls":
 		v.encodeToHLS()
 	case "hls-encrypted":
@@ -197,12 +199,12 @@ func (v *Video) sendToNotifyChan(successful bool, fileName, message string) {
 
 // encodeToMP4 takes input file, from receiver v.InputFile, and encodes to MP4 format
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
-func (v *Video) encodeToMP4() {
+func (v *Video) encodeToMP4() error {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
 		v.sendToNotifyChan(false, "", err.Error())
-		return
+		return err
 	}
 
 	baseFileName := ""
@@ -215,14 +217,15 @@ func (v *Video) encodeToMP4() {
 		var t toolbox.Tools
 		baseFileName = t.RandomString(10)
 	}
+
 	err = v.Encoder.Engine.EncodeToMP4(v, baseFileName)
 	if err != nil {
 		v.sendToNotifyChan(false, "", err.Error())
-		return
+		return err
 	}
 
-	log.Println("Sending to notify chan")
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.mp4", baseFileName), fmt.Sprintf("Encoding successful for id %d", v.ID))
+	return nil
 }
 
 // CheckSignature returns true if the signature supplied in the URL is valid, and false
