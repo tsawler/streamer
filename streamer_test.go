@@ -11,14 +11,26 @@ func TestNew(t *testing.T) {
 		maxWorkers int
 	}
 	tests := []struct {
-		name string
-		args args
+		name           string
+		args           args
+		specifyEncoder bool
 	}{
-		{name: "test_new", args: args{jobQueue: make(chan VideoProcessingJob, 10)}},
+		{name: "test_new", args: args{jobQueue: make(chan VideoProcessingJob, 10)}, specifyEncoder: false},
+		{name: "test_new_with_encoder", args: args{jobQueue: make(chan VideoProcessingJob, 10)}, specifyEncoder: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := New(tt.args.jobQueue, tt.args.maxWorkers)
+			var got *VideoDispatcher
+			if tt.specifyEncoder {
+				var engine testEncoder
+				e := Processor{
+					Engine: &engine,
+				}
+				got = New(tt.args.jobQueue, tt.args.maxWorkers, e)
+			} else {
+				got = New(tt.args.jobQueue, tt.args.maxWorkers)
+			}
+
 			if got.maxWorkers != tt.args.maxWorkers {
 				t.Errorf("New() = %d, want %d", got.maxWorkers, tt.args.maxWorkers)
 			}
