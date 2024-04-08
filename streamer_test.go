@@ -111,9 +111,13 @@ func Test_encodeToMP4(t *testing.T) {
 				return
 			}
 
-			result := <-testNotifyChan
-			if !result.Successful && tt.expectSuccess {
-				t.Errorf("%s: encoding failed", tt.name)
+			// We only wait for a channel for successful encodes, since we are testing
+			// the encoder, and not the encode() function.
+			if tt.expectSuccess {
+				result := <-testNotifyChan
+				if !result.Successful && tt.expectSuccess {
+					t.Errorf("%s: encoding failed", tt.name)
+				}
 			}
 		})
 	}

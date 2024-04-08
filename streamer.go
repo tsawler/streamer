@@ -103,9 +103,15 @@ func (v *Video) encode() {
 			v.sendToNotifyChan(false, "", fmt.Sprintf("error processing %d: %s", v.ID, err.Error()))
 		}
 	case "hls":
-		v.encodeToHLS()
+		err := v.encodeToHLS()
+		if err != nil {
+			v.sendToNotifyChan(false, "", fmt.Sprintf("error processing %d: %s", v.ID, err.Error()))
+		}
 	case "hls-encrypted":
-		v.encodeToHLSEncrypted()
+		err := v.encodeToHLSEncrypted()
+		if err != nil {
+			v.sendToNotifyChan(false, "", fmt.Sprintf("error processing %d: %s", v.ID, err.Error()))
+		}
 	default:
 		v.sendToNotifyChan(false, "", fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 	}
@@ -114,12 +120,11 @@ func (v *Video) encode() {
 // encodeToHLSEncrypted takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir. The resulting files are encrypted.
-func (v *Video) encodeToHLSEncrypted() {
+func (v *Video) encodeToHLSEncrypted() error {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, "", err.Error())
-		return
+		return err
 	}
 
 	baseFileName := ""
@@ -135,22 +140,21 @@ func (v *Video) encodeToHLSEncrypted() {
 
 	err = v.Encoder.Engine.EncodeToHLSEncrypted(v, baseFileName)
 	if err != nil {
-		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
-		return
+		return err
 	}
 
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
+	return nil
 }
 
 // encodeToHLS takes input file, from receiver v.InputFile, and encodes to HLS format
 // at 1080p, 720p, and 480p, putting resulting files in the output directory
 // specified in the receiver as v.OutputDir.
-func (v *Video) encodeToHLS() {
+func (v *Video) encodeToHLS() error {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, "", err.Error())
-		return
+		return err
 	}
 
 	baseFileName := ""
@@ -166,11 +170,10 @@ func (v *Video) encodeToHLS() {
 
 	err = v.Encoder.Engine.EncodeToHLS(v, baseFileName)
 	if err != nil {
-		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
-		return
+		return err
 	}
-
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
+	return nil
 }
 
 // createDirIfNotExists creates the output directory, and all required
@@ -203,7 +206,6 @@ func (v *Video) encodeToMP4() error {
 	// Make sure output directory exists.
 	err := v.createDirIfNotExists()
 	if err != nil {
-		v.sendToNotifyChan(false, "", err.Error())
 		return err
 	}
 
@@ -220,7 +222,6 @@ func (v *Video) encodeToMP4() error {
 
 	err = v.Encoder.Engine.EncodeToMP4(v, baseFileName)
 	if err != nil {
-		v.sendToNotifyChan(false, "", err.Error())
 		return err
 	}
 

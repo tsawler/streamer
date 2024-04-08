@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 	testProcessorFailing = Processor{
 		Engine: &tef,
 	}
-	testNotifyChan = make(chan ProcessingMessage, 1)
+	testNotifyChan = make(chan ProcessingMessage, 10)
 	os.Exit(m.Run())
 }
 

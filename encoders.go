@@ -21,40 +21,27 @@ type VideoEncoder struct{}
 
 // EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
 func (ve *VideoEncoder) EncodeToMP4(v *Video, baseFileName string) error {
-	// Create a channel to wait for results of encoding.
-	result := make(chan error)
+	// Create a transcoder.
+	trans := new(transcoder.Transcoder)
 
-	// Run the encoding process in its own goroutine.
-	go func(result chan error) {
-		// Create a transcoder.
-		trans := new(transcoder.Transcoder)
+	// Build output path.
+	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
 
-		// Build output path.
-		outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
-
-		// Initialize the transcoder.
-		err := trans.Initialize(v.InputFile, outputPath)
-		if err != nil {
-			result <- err
-		}
-
-		// Set codec.
-		trans.MediaFile().SetVideoCodec("libx264")
-
-		// Start transcoder process.
-		done := trans.Run(false)
-
-		// Wait for the transcoding process to end.
-		err = <-done
-		if err != nil {
-			result <- err
-		}
-	}(result)
-
-	// Get the result from the channel.
-	err := <-result
+	// Initialize the transcoder.
+	err := trans.Initialize(v.InputFile, outputPath)
 	if err != nil {
-		log.Println("Error encoding mp4:", err.Error())
+		return err
+	}
+
+	// Set codec.
+	trans.MediaFile().SetVideoCodec("libx264")
+
+	// Start transcoder process.
+	done := trans.Run(false)
+
+	// Wait for the transcoding process to end.
+	err = <-done
+	if err != nil {
 		return err
 	}
 
