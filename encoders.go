@@ -21,22 +21,25 @@ type VideoEncoder struct{}
 
 // EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
 func (ve *VideoEncoder) EncodeToMP4(v *Video, baseFileName string) error {
+	// Create a transcoder.
 	trans := new(transcoder.Transcoder)
 
+	// Build output path.
 	outputPath := fmt.Sprintf("%s/%s.mp4", v.OutputDir, baseFileName)
 
+	// Initialize the transcoder.
 	err := trans.Initialize(v.InputFile, outputPath)
 	if err != nil {
 		return err
 	}
 
-	// set codec
+	// Set codec.
 	trans.MediaFile().SetVideoCodec("libx264")
 
-	// Start transcoder process with progress checking
+	// Start transcoder process.
 	done := trans.Run(false)
 
-	// This channel is used to wait for the transcoding process to end
+	// Wait for the transcoding process to end.
 	err = <-done
 	if err != nil {
 		return err
