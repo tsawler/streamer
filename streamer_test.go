@@ -142,7 +142,7 @@ func Test_encode(t *testing.T) {
 		{name: "hls encrypted", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: true, specifyEncoder: false},
 		{name: "hls encrypted rename", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: true, specifyEncoder: false},
 		{name: "hls encrypted_fail", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, specifyEncoder: true},
-		{name: "expect error", args: args{6, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
+		{name: "invalid encoding type", args: args{6, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
 	}
 	for _, tt := range tests {
 		wp := New(make(chan VideoProcessingJob), 1)
