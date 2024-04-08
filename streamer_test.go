@@ -87,7 +87,6 @@ func Test_encodeToMP4(t *testing.T) {
 			wp := New(make(chan VideoProcessingJob), 1)
 			wp.Processor = tt.processor
 			v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", "./testdata/output", "mp4", testNotifyChan, tt.args.ops)
-			v.Encoder = tt.processor
 
 			err := v.encodeToMP4()
 			if err != nil && tt.expectSuccess {
