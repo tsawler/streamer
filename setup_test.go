@@ -23,6 +23,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// testEncoder is a type which satisfies the Encoder interface. We use it to
+// test successful encoding, so all its methods return nil (no error).
 type testEncoder struct{}
 
 // EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
@@ -40,6 +42,8 @@ func (te *testEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error
 	return nil
 }
 
+// testEncoderFailing is a type which satisfies the Encoder interface. We use it to
+// test for encodes which fail, so all its methods return an error.
 type testEncoderFailing struct{}
 
 // EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
