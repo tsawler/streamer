@@ -36,26 +36,25 @@ func TestNew(t *testing.T) {
 
 func TestNewVideo(t *testing.T) {
 	type args struct {
-		id     int
-		enc    string
-		notify chan ProcessingMessage
-		ops    *VideoOptions
+		id  int
+		enc string
+		ops *VideoOptions
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{name: "mp4", args: args{1, "mp4", make(chan ProcessingMessage), &VideoOptions{RenameOutput: false}}},
-		{name: "mp4 rename", args: args{1, "mp4", make(chan ProcessingMessage), &VideoOptions{RenameOutput: true}}},
-		{name: "hls", args: args{1, "hls", make(chan ProcessingMessage), &VideoOptions{RenameOutput: false}}},
-		{name: "hls rename", args: args{1, "hls", make(chan ProcessingMessage), &VideoOptions{RenameOutput: true}}},
-		{name: "mp4 empty", args: args{1, "", make(chan ProcessingMessage), &VideoOptions{RenameOutput: false}}},
+		{name: "mp4", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}},
+		{name: "mp4 rename", args: args{1, "mp4", &VideoOptions{RenameOutput: true}}},
+		{name: "hls", args: args{1, "hls", &VideoOptions{RenameOutput: false}}},
+		{name: "hls rename", args: args{1, "hls", &VideoOptions{RenameOutput: true}}},
+		{name: "mp4 empty", args: args{1, "", &VideoOptions{RenameOutput: false}}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wp := New(make(chan VideoProcessingJob), 1)
-			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, tt.args.notify, tt.args.ops)
+			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, testNotifyChan, tt.args.ops)
 			if v.Options.RenameOutput != tt.args.ops.RenameOutput {
 				t.Errorf("wrong value for rename; got %t expected %t", v.Options.RenameOutput, tt.args.ops.RenameOutput)
 			}
@@ -127,5 +126,39 @@ func Test_encode(t *testing.T) {
 			t.Errorf("%s: encoding failed: %s", tt.name, result.Message)
 		}
 	}
+}
+func Test_pool(t *testing.T) {
+	type args struct {
+		id  int
+		enc string
+		ops *VideoOptions
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{name: "mp4", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}},
+		{name: "mp4 rename", args: args{1, "mp4", &VideoOptions{RenameOutput: true}}},
+		{name: "hls", args: args{1, "hls", &VideoOptions{RenameOutput: false}}},
+		{name: "hls rename", args: args{1, "hls", &VideoOptions{RenameOutput: true}}},
+		{name: "mp4 empty", args: args{1, "", &VideoOptions{RenameOutput: false}}},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			videoQueue := make(chan VideoProcessingJob, 10)
+			wp := New(videoQueue, 3)
+			wp.Processor = testProcessor
+			wp.Run()
+
+			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, testNotifyChan, tt.args.ops)
+
+			videoQueue <- VideoProcessingJob{Video: v}
+
+			result := <-testNotifyChan
+			if !result.Successful {
+				t.Errorf("%s: encoding failed", tt.name)
+			}
+		})
+	}
 }

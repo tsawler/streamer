@@ -13,7 +13,7 @@ func TestMain(m *testing.M) {
 	testProcessor = Processor{
 		Engine: &te,
 	}
-	testNotifyChan = make(chan ProcessingMessage, 1)
+	testNotifyChan = make(chan ProcessingMessage, 10)
 	os.Exit(m.Run())
 }
 
