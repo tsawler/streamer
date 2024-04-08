@@ -24,11 +24,40 @@ func TestNew(t *testing.T) {
 			}
 			var isChannel = reflect.ValueOf(got.jobQueue).Kind() == reflect.Chan
 			if !isChannel {
-				t.Errorf("jobQueue is not a channel")
+				t.Error("jobQueue is not a channel")
 			}
 			channelType := reflect.ValueOf(got.jobQueue).Type().Elem()
 			if channelType.Name() != "VideoProcessingJob" {
-				t.Errorf("Incorrect channel type")
+				t.Error("Incorrect channel type")
+			}
+		})
+	}
+}
+
+func TestNewVideo(t *testing.T) {
+	type args struct {
+		id      int
+		enc     string
+		max1080 string
+		max740  string
+		max480  string
+		notify  chan ProcessingMessage
+		rename  bool
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{name: "mp4", args: args{1, "mp4", "2400k", "1200k", "800k", make(chan ProcessingMessage), false}},
+		{name: "hls", args: args{1, "hls", "", "", "", make(chan ProcessingMessage), true}},
+		{name: "mp4 empty", args: args{1, "", "", "", "", make(chan ProcessingMessage), true}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := NewVideo(tt.args.id, tt.args.enc, tt.args.max1080, tt.args.max740, tt.args.max480, tt.args.notify, tt.args.rename)
+			if v.RenameOutput != tt.args.rename {
+				t.Errorf("wrong value for rename; got %t expected %t", v.RenameOutput, tt.args.rename)
 			}
 		})
 	}
