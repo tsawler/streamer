@@ -34,35 +34,7 @@ func (ve *VideoEncoder) EncodeToMP4(v *Video, baseFileName string) error {
 	trans.MediaFile().SetVideoCodec("libx264")
 
 	// Start transcoder process with progress checking
-	done := trans.Run(true)
-
-	go func() {
-		// Returns a channel to get the transcoding progress
-		progress := trans.Output()
-
-		// Printing transcoding progress to log
-		curProgress := 0
-		oldInt := 0
-
-		for msg := range progress {
-			if int(msg.Progress)%2 == 0 {
-				if oldInt != int(msg.Progress) {
-					// we have moved up 2%
-					curProgress = curProgress + 2
-					oldInt = int(msg.Progress)
-					log.Printf("%d: %d%%\n", v.ID, curProgress)
-
-					data := map[string]string{
-						"message":  "progress",
-						"video_id": fmt.Sprintf("%d", v.ID),
-						"percent":  fmt.Sprintf("%d", int(msg.Progress)),
-					}
-					v.pushJSONToWs(data)
-					v.pushToWs(fmt.Sprintf("%d", int(msg.Progress)))
-				}
-			}
-		}
-	}()
+	done := trans.Run(false)
 
 	// This channel is used to wait for the transcoding process to end
 	err = <-done

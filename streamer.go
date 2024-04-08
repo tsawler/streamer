@@ -3,9 +3,9 @@ package streamer
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"github.com/tsawler/signer"
 	"github.com/tsawler/toolbox"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -22,7 +22,6 @@ type Video struct {
 	Secret          string                 // For encrypted HLS, the name of the file with the secret.
 	KeyInfo         string                 // For encrypted HLS, the key info file.
 	EncodingType    string                 // mp4, hls, or hls-encrypted.
-	WebSocket       *websocket.Conn        // An (optional) websocket connection to send messages around.
 	SegmentDuration int                    // If HLS, how long should segments be in seconds?
 	MaxRate1080p    string                 // The Maximum rate for 1080p encoding.
 	MaxRate720p     string                 // The Maximum rate for 720p encoding.
@@ -31,7 +30,7 @@ type Video struct {
 
 // NewVideo is a convenience factory method for creating video objects with
 // sensible default values.
-func NewVideo(encType, max1080, max720, max480 string, rename ...bool) Video {
+func NewVideo(id int, encType, max1080, max720, max480 string, notifyChan chan ProcessingMessage, rename ...bool) Video {
 	if max1080 == "" {
 		max1080 = "1200k"
 	}
@@ -54,6 +53,7 @@ func NewVideo(encType, max1080, max720, max480 string, rename ...bool) Video {
 		MaxRate720p:  max720,
 		MaxRate480p:  max480,
 		RenameOutput: renameFile,
+		NotifyChan:   notifyChan,
 	}
 }
 
@@ -88,8 +88,6 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
 
 // encode allows us to encode the source file to one of the supported formats.
 func (v *Video) encode() {
-	v.pushToWs(fmt.Sprintf("Processing started for %d", v.ID))
-
 	switch v.EncodingType {
 	case "mp4":
 		v.encodeToMP4()
@@ -98,7 +96,6 @@ func (v *Video) encode() {
 	case "hls-encrypted":
 		v.encodeToHLSEncrypted()
 	default:
-		v.pushToWs(fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 		v.sendToNotifyChan(false, "", fmt.Sprintf("error processing for %d: invalid encoding type", v.ID))
 	}
 }
@@ -128,12 +125,10 @@ func (v *Video) encodeToHLSEncrypted() {
 	var ve VideoEncoder
 	err = ve.EncodeToHLSEncrypted(v, baseFileName)
 	if err != nil {
-		v.pushToWs(fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		return
 	}
 
-	v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 }
 
@@ -163,12 +158,10 @@ func (v *Video) encodeToHLS() {
 
 	err = ve.EncodeToHLS(v, baseFileName)
 	if err != nil {
-		v.pushToWs(fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		return
 	}
 
-	v.pushToWs(fmt.Sprintf("Processing complete for id %d", v.ID))
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Processing complete for id %d", v.ID))
 }
 
@@ -184,23 +177,6 @@ func (v *Video) createDirIfNotExists() error {
 		}
 	}
 	return nil
-}
-
-// pushToWs pushes a message to websocket, if appropriate.
-func (v *Video) pushToWs(msg string) {
-	if v.WebSocket != nil {
-		_ = v.WebSocket.WriteMessage(websocket.TextMessage, []byte(msg))
-	}
-}
-
-// pushJSONToWs pushes a message to websocket, if appropriate.
-func (v *Video) pushJSONToWs(payload map[string]string) {
-	if v.WebSocket != nil {
-		p, err := json.Marshal(payload)
-		if err == nil {
-			_ = v.WebSocket.WriteJSON(v.WebSocket.WriteJSON(p))
-		}
-	}
 }
 
 // sendToNotifyChan pushes a message down the notify channel.
@@ -237,12 +213,11 @@ func (v *Video) encodeToMP4() {
 	var ve VideoEncoder
 	err = ve.EncodeToMP4(v, baseFileName)
 	if err != nil {
-		v.pushToWs(err.Error())
 		v.sendToNotifyChan(false, "", err.Error())
 		return
 	}
 
-	v.pushToWs(fmt.Sprintf("Encoding successful for id %d", v.ID))
+	log.Println("Sending to notify chan")
 	v.sendToNotifyChan(true, fmt.Sprintf("%s.mp4", baseFileName), fmt.Sprintf("Encoding successful for id %d", v.ID))
 }
 
