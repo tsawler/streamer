@@ -69,33 +69,43 @@ func Test_encodeToMP4(t *testing.T) {
 		ops *VideoOptions
 	}
 	tests := []struct {
-		name string
-		args args
+		name          string
+		processor     Processor
+		expectSuccess bool
+		args          args
 	}{
-		{name: "mp4", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}},
-		{name: "mp4 rename", args: args{2, "mp4", &VideoOptions{RenameOutput: true}}},
-		{name: "mp4 no ops", args: args{2, "mp4", nil}},
+		{name: "mp4", processor: testProcessor, expectSuccess: true, args: args{1, "mp4", &VideoOptions{RenameOutput: false}}},
+		{name: "mp4 rename", processor: testProcessor, expectSuccess: true, args: args{2, "mp4", &VideoOptions{RenameOutput: true}}},
+		{name: "mp4 no ops", processor: testProcessor, expectSuccess: true, args: args{3, "mp4", nil}},
+		{name: "mp4 failing", processor: testProcessorFailing, expectSuccess: false, args: args{4, "mp4", &VideoOptions{RenameOutput: false}}},
+		{name: "mp4 rename failing", processor: testProcessorFailing, expectSuccess: false, args: args{5, "mp4", &VideoOptions{RenameOutput: true}}},
+		{name: "mp4 no ops failing", processor: testProcessorFailing, expectSuccess: false, args: args{6, "mp4", nil}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wp := New(make(chan VideoProcessingJob), 1)
+			wp.Processor = tt.processor
 			v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", "./testdata/output", "mp4", testNotifyChan, tt.args.ops)
-			v.Encoder = testProcessor
+			v.Encoder = tt.processor
 
 			err := v.encodeToMP4()
-			if err != nil {
+			if err != nil && tt.expectSuccess {
 				t.Errorf("%s: encode to mp4 failed: %s", tt.name, err.Error())
 				return
 			}
 
+			if err == nil && !tt.expectSuccess {
+				t.Errorf("%s: encode to mp4 did not fail, and it should", tt.name)
+				return
+			}
+
 			result := <-testNotifyChan
-			if !result.Successful {
+			if !result.Successful && tt.expectSuccess {
 				t.Errorf("%s: encoding failed", tt.name)
 			}
 		})
 	}
-
 }
 
 func Test_encode(t *testing.T) {
