@@ -36,29 +36,50 @@ func TestNew(t *testing.T) {
 
 func TestNewVideo(t *testing.T) {
 	type args struct {
-		id      int
-		enc     string
-		max1080 string
-		max740  string
-		max480  string
-		notify  chan ProcessingMessage
-		rename  bool
+		id     int
+		enc    string
+		notify chan ProcessingMessage
+		ops    *VideoOptions
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{name: "mp4", args: args{1, "mp4", "2400k", "1200k", "800k", make(chan ProcessingMessage), false}},
-		{name: "hls", args: args{1, "hls", "", "", "", make(chan ProcessingMessage), true}},
-		{name: "mp4 empty", args: args{1, "", "", "", "", make(chan ProcessingMessage), true}},
+		{name: "mp4", args: args{1, "mp4", make(chan ProcessingMessage), &VideoOptions{RenameOutput: false}}},
+		{name: "hls", args: args{1, "hls", make(chan ProcessingMessage), &VideoOptions{RenameOutput: true}}},
+		{name: "mp4 empty", args: args{1, "", make(chan ProcessingMessage), &VideoOptions{RenameOutput: false}}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewVideo(tt.args.id, tt.args.enc, tt.args.max1080, tt.args.max740, tt.args.max480, tt.args.notify, tt.args.rename)
-			if v.RenameOutput != tt.args.rename {
-				t.Errorf("wrong value for rename; got %t expected %t", v.RenameOutput, tt.args.rename)
+			wp := New(make(chan VideoProcessingJob), 1)
+			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, tt.args.notify, tt.args.ops)
+			if v.Options.RenameOutput != tt.args.ops.RenameOutput {
+				t.Errorf("wrong value for rename; got %t expected %t", v.Options.RenameOutput, tt.args.ops.RenameOutput)
 			}
 		})
 	}
 }
+
+type TestEncoder struct{}
+
+// EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
+func (ve *TestEncoder) EncodeToMP4(v *Video, baseFileName string) error {
+	return nil
+}
+
+// EncodeToHLS takes a Video object and a base file name, and encodes to HLS format.
+func (ve *TestEncoder) EncodeToHLS(v *Video, baseFileName string) error {
+	return nil
+}
+
+// EncodeToHLSEncrypted takes a Video object and a base file name, and encodes to encrypted HLS format.
+func (ve *TestEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error {
+	return nil
+}
+
+//func Test_encodeToMP4(t *testing.T) {
+//	var te TestEncoder
+//	VE = te
+//	err :=
+//}

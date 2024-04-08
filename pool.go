@@ -47,26 +47,27 @@ type VideoDispatcher struct {
 	WorkerPool chan chan VideoProcessingJob // Our worker pool channel.
 	maxWorkers int                          // The maximum number of workers in our pool.
 	jobQueue   chan VideoProcessingJob      // The channel we send work to.
+	Processor  Processor
 }
 
 // Run runs the workers.
-func (d *VideoDispatcher) Run() {
-	for i := 0; i < d.maxWorkers; i++ {
-		worker := newVideoWorker(i+1, d.WorkerPool)
+func (vd *VideoDispatcher) Run() {
+	for i := 0; i < vd.maxWorkers; i++ {
+		worker := newVideoWorker(i+1, vd.WorkerPool)
 		worker.start()
 	}
 
-	go d.dispatch()
+	go vd.dispatch()
 }
 
 // dispatch dispatches a worker.
-func (d *VideoDispatcher) dispatch() {
+func (vd *VideoDispatcher) dispatch() {
 	for {
 		select {
-		case job := <-d.jobQueue:
+		case job := <-vd.jobQueue:
 			go func() {
-				workerJobQueue := <-d.WorkerPool // assign a channel from our worker pool to workerJobPool.
-				workerJobQueue <- job            // Send the unit of work to our queue.
+				workerJobQueue := <-vd.WorkerPool // assign a channel from our worker pool to workerJobPool.
+				workerJobQueue <- job             // Send the unit of work to our queue.
 			}()
 		}
 	}

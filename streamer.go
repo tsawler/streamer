@@ -1,7 +1,6 @@
 package streamer
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/tsawler/signer"
 	"github.com/tsawler/toolbox"
@@ -12,49 +11,8 @@ import (
 	"strings"
 )
 
-// Video is the type for a video that we wish to process.
-type Video struct {
-	ID              int                    // An arbitrary ID for the video.
-	InputFile       string                 // The path to the input file.
-	OutputDir       string                 // The path to the output directory.
-	NotifyChan      chan ProcessingMessage // A channel to receive the output message.
-	RenameOutput    bool                   // If true, generate random name for output file.
-	Secret          string                 // For encrypted HLS, the name of the file with the secret.
-	KeyInfo         string                 // For encrypted HLS, the key info file.
-	EncodingType    string                 // mp4, hls, or hls-encrypted.
-	SegmentDuration int                    // If HLS, how long should segments be in seconds?
-	MaxRate1080p    string                 // The Maximum rate for 1080p encoding.
-	MaxRate720p     string                 // The Maximum rate for 720p encoding.
-	MaxRate480p     string                 // The Maximum rate for 480p encoding.
-}
-
-// NewVideo is a convenience factory method for creating video objects with
-// sensible default values.
-func NewVideo(id int, encType, max1080, max720, max480 string, notifyChan chan ProcessingMessage, rename ...bool) Video {
-	if max1080 == "" {
-		max1080 = "1200k"
-	}
-	if max720 == "" {
-		max720 = "600k"
-	}
-	if max480 == "" {
-		max480 = "400k"
-	}
-	if encType == "" {
-		encType = "mp4"
-	}
-	renameFile := false
-	if len(rename) > 0 {
-		renameFile = rename[0]
-	}
-	return Video{
-		EncodingType: encType,
-		MaxRate1080p: max1080,
-		MaxRate720p:  max720,
-		MaxRate480p:  max480,
-		RenameOutput: renameFile,
-		NotifyChan:   notifyChan,
-	}
+type Processor struct {
+	Engine Encoder
 }
 
 // ProcessingMessage is the information sent back to the client.
@@ -65,24 +23,75 @@ type ProcessingMessage struct {
 	OutputFile string `json:"output_file"` // The name of the generated file.
 }
 
-// ToJSON marshals the receiver, pm, to JSON and returns a slice of bytes.
-func (pm *ProcessingMessage) ToJSON() ([]byte, error) {
-	b, err := json.Marshal(pm)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
+// Video is the type for a video that we wish to process.
+type Video struct {
+	ID           int                    // An arbitrary ID for the video.
+	InputFile    string                 // The path to the input file.
+	OutputDir    string                 // The path to the output directory.
+	EncodingType string                 // mp4, hls, or hls-encrypted.
+	NotifyChan   chan ProcessingMessage // A channel to receive the output message.
+	Options      *VideoOptions          // Options for encoding.
+	Encoder      Processor              // The processing engine we'll use for encoding.
 }
 
 // New creates and returns a new worker pool.
-func New(jobQueue chan VideoProcessingJob, maxWorkers int) *VideoDispatcher {
+func New(jobQueue chan VideoProcessingJob, maxWorkers int, encoder ...Processor) *VideoDispatcher {
 	workerPool := make(chan chan VideoProcessingJob, maxWorkers)
-
+	var p Processor
+	if len(encoder) > 0 {
+		p = Processor{
+			Engine: encoder[0].Engine,
+		}
+	} else {
+		var e VideoEncoder
+		p = Processor{
+			Engine: &e,
+		}
+	}
 	return &VideoDispatcher{
 		jobQueue:   jobQueue,
 		maxWorkers: maxWorkers,
 		WorkerPool: workerPool,
+		Processor:  p,
+	}
+}
+
+type VideoOptions struct {
+	RenameOutput    bool   // If true, generate random name for output file.
+	Secret          string // For encrypted HLS, the name of the file with the secret.
+	KeyInfo         string // For encrypted HLS, the key info file.
+	SegmentDuration int    // If HLS, how long should segments be in seconds?
+	MaxRate1080p    string // The Maximum rate for 1080p encoding.
+	MaxRate720p     string // The Maximum rate for 720p encoding.
+	MaxRate480p     string // The Maximum rate for 480p encoding.
+}
+
+// NewVideo is a convenience factory method for creating video objects with
+// sensible default values.
+func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notifyChan chan ProcessingMessage, options *VideoOptions) Video {
+	if options == nil {
+		options = &VideoOptions{}
+	}
+	if options.MaxRate1080p == "" {
+		options.MaxRate1080p = "1200k"
+	}
+	if options.MaxRate720p == "" {
+		options.MaxRate720p = "600k"
+	}
+	if options.MaxRate480p == "" {
+		options.MaxRate480p = "400k"
+	}
+	if encType == "" {
+		encType = "mp4"
+	}
+	return Video{
+		ID:           id,
+		InputFile:    input,
+		OutputDir:    output,
+		EncodingType: encType,
+		NotifyChan:   notifyChan,
+		Encoder:      vd.Processor,
+		Options:      options,
 	}
 }
 
@@ -113,7 +122,7 @@ func (v *Video) encodeToHLSEncrypted() {
 
 	baseFileName := ""
 
-	if !v.RenameOutput {
+	if !v.Options.RenameOutput {
 		// Get base filename.
 		b := path.Base(v.InputFile)
 		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
@@ -122,8 +131,7 @@ func (v *Video) encodeToHLSEncrypted() {
 		baseFileName = t.RandomString(10)
 	}
 
-	var ve VideoEncoder
-	err = ve.EncodeToHLSEncrypted(v, baseFileName)
+	err = v.Encoder.Engine.EncodeToHLSEncrypted(v, baseFileName)
 	if err != nil {
 		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		return
@@ -145,7 +153,7 @@ func (v *Video) encodeToHLS() {
 
 	baseFileName := ""
 
-	if !v.RenameOutput {
+	if !v.Options.RenameOutput {
 		// Get base filename.
 		b := path.Base(v.InputFile)
 		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
@@ -154,9 +162,7 @@ func (v *Video) encodeToHLS() {
 		baseFileName = t.RandomString(10)
 	}
 
-	var ve VideoEncoder
-
-	err = ve.EncodeToHLS(v, baseFileName)
+	err = v.Encoder.Engine.EncodeToHLS(v, baseFileName)
 	if err != nil {
 		v.sendToNotifyChan(false, fmt.Sprintf("%s.m3u8", baseFileName), fmt.Sprintf("Error processing video id %d: %s", v.ID, err.Error()))
 		return
@@ -201,7 +207,7 @@ func (v *Video) encodeToMP4() {
 
 	baseFileName := ""
 
-	if !v.RenameOutput {
+	if !v.Options.RenameOutput {
 		// Get base filename.
 		b := path.Base(v.InputFile)
 		baseFileName = strings.TrimSuffix(b, filepath.Ext(b))
@@ -209,9 +215,7 @@ func (v *Video) encodeToMP4() {
 		var t toolbox.Tools
 		baseFileName = t.RandomString(10)
 	}
-
-	var ve VideoEncoder
-	err = ve.EncodeToMP4(v, baseFileName)
+	err = v.Encoder.Engine.EncodeToMP4(v, baseFileName)
 	if err != nil {
 		v.sendToNotifyChan(false, "", err.Error())
 		return
@@ -225,7 +229,7 @@ func (v *Video) encodeToMP4() {
 // if it is not, or does not exist. It also returns false if the expiration time (minutes)
 // has passed.
 func (v *Video) CheckSignature(urlPath string, expiration int) bool {
-	sign := signer.Signature{Secret: v.Secret}
+	sign := signer.Signature{Secret: v.Options.Secret}
 	valid, err := sign.VerifyURL(urlPath)
 	if err != nil {
 		return false

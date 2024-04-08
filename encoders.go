@@ -12,8 +12,8 @@ import (
 // this interface must implement all its methods.
 type Encoder interface {
 	EncodeToMP4(v *Video, baseFileName string) error
-	EncodeToHLS(v *Video) error
-	EncodeToHLSEncrypted(v *Video)
+	EncodeToHLS(v *Video, baseFileName string) error
+	EncodeToHLSEncrypted(v *Video, baseFileName string) error
 }
 
 // VideoEncoder is a type which satisfies the Encoder interface.
@@ -64,13 +64,13 @@ func (ve *VideoEncoder) EncodeToHLS(v *Video, baseFileName string) error {
 			"-c:a", "aac",
 			"-ar", "48000",
 			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", v.MaxRate1080p,
+			"-maxrate:v:0", v.Options.MaxRate1080p,
 			"-b:a:0", "128k",
 			"-filter:v:1", "scale=-2:720",
-			"-maxrate:v:1", v.MaxRate720p,
+			"-maxrate:v:1", v.Options.MaxRate720p,
 			"-b:a:1", "128k",
 			"-filter:v:2", "scale=-2:480",
-			"-maxrate:v:2", v.MaxRate480p,
+			"-maxrate:v:2", v.Options.MaxRate480p,
 			"-b:a:2", "64k",
 			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
 			"-preset", "slow",
@@ -78,7 +78,7 @@ func (ve *VideoEncoder) EncodeToHLS(v *Video, baseFileName string) error {
 			"-threads", "0",
 			"-f", "hls",
 			"-hls_playlist_type", "event",
-			"-hls_time", strconv.Itoa(v.SegmentDuration),
+			"-hls_time", strconv.Itoa(v.Options.SegmentDuration),
 			"-hls_flags", "independent_segments",
 			"-hls_segment_type", "mpegts",
 			"-hls_playlist_type", "vod",
@@ -121,13 +121,13 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 			"-c:a", "aac",
 			"-ar", "48000",
 			"-filter:v:0", "scale=-2:1080",
-			"-maxrate:v:0", v.MaxRate1080p,
+			"-maxrate:v:0", v.Options.MaxRate1080p,
 			"-b:a:0", "128k",
 			"-filter:v:1", "scale=-2:720",
-			"-maxrate:v:1", v.MaxRate720p,
+			"-maxrate:v:1", v.Options.MaxRate720p,
 			"-b:a:1", "128k",
 			"-filter:v:2", "scale=-2:480",
-			"-maxrate:v:2", v.MaxRate480p,
+			"-maxrate:v:2", v.Options.MaxRate480p,
 			"-b:a:2", "64k",
 			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
 			"-preset", "slow",
@@ -135,10 +135,10 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 			"-threads", "0",
 			"-f", "hls",
 			"-hls_playlist_type", "event",
-			"-hls_time", strconv.Itoa(v.SegmentDuration),
+			"-hls_time", strconv.Itoa(v.Options.SegmentDuration),
 			"-hls_flags", "independent_segments",
 			"-hls_segment_type", "mpegts",
-			"-hls_key_info_file", v.KeyInfo,
+			"-hls_key_info_file", v.Options.KeyInfo,
 			"-hls_playlist_type", "vod",
 			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
 			"-profile:v", "baseline", // baseline profile is compatible with most devices
