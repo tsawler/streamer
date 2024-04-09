@@ -92,16 +92,14 @@ package. The location of enc.keyinfo can be specified when creating
 a variable of `streamer.Video` type, in the field `streamer.VideoOptions`, e.g.
 
 ~~~go
-video := streamer.Video{
-    ID:           1,
-    InputFile:    "./uploads/myfile.mp4",
-    OutputDir:    "./output",
-    EncodingType: "hls-encrypted",
-    NotifyChan:   notifyChan,
-    Options: &streamer.VideoOptions{
-        Secret:          "./enc.key",
-        SegmentDuration: 10,
-        KeyInfo:         "./path/to/key.info",
-    },
+// Create the options for this encode.
+ops := &streamer.VideoOptions{
+    RenameOutput:    false,
+    Secret:          "enc.key",
+    KeyInfo:         "./keys/enc.keyinfo", // Specify path to enc.keyinfo
+    SegmentDuration: 10,
 }
+
+// Get the video by calling NewVideo on the worker pool object.
+myVideo := wp.NewVideo(4, "./upload/myvid.mp4", "./output", "hls-encrypted", notifyChan, ops)
 ~~~
