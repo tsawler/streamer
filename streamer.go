@@ -2,7 +2,6 @@ package streamer
 
 import (
 	"fmt"
-	"github.com/tsawler/signer"
 	"github.com/tsawler/toolbox"
 	"os"
 	"path"
@@ -236,18 +235,4 @@ func (v *Video) encodeToMP4() (string, error) {
 	}
 
 	return baseFileName, nil
-}
-
-// CheckSignature returns true if the signature supplied in the URL is valid, and false
-// if it is not, or does not exist. It also returns false if the expiration time (minutes)
-// has passed.
-func (v *Video) CheckSignature(urlPath string, expiration int) bool {
-	sign := signer.Signature{Secret: v.Options.Secret}
-	valid, err := sign.VerifyURL(urlPath)
-	if err != nil {
-		return false
-	}
-
-	valid = sign.Expired(urlPath, expiration)
-	return valid
 }
