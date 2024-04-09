@@ -56,6 +56,7 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int, encoder ...Processor)
 	}
 }
 
+// VideoOptions allows us to specify encoding options.
 type VideoOptions struct {
 	RenameOutput    bool   // If true, generate random name for output file.
 	Secret          string // For encrypted HLS, the name of the file with the secret.
