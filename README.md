@@ -2,6 +2,7 @@
 [![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://github.com/tsawler/streamer/blob/main/LICENSE.md)
 ![Tests](https://github.com/tsawler/streamer/actions/workflows/tests.yml/badge.svg)
 [![Go Coverage](https://github.com/tsawler/streamer/wiki/coverage.svg)](https://raw.githack.com/wiki/tsawler/streamer/coverage.html)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tsawler/streamer)](https://goreportcard.com/report/github.com/tsawler/streamer)
 
 # Streamer
 
