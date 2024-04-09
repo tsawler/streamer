@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// Processor is a simple wrapper for anything that satisfies the Encoder interface.
+// This makes testing possible without actually running ffmpeg.
 type Processor struct {
 	Engine Encoder
 }
