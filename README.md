@@ -27,7 +27,8 @@ func main() {
 	videoQueue := make(chan streamer.VideoProcessingJob, 10)
 	defer close(videoQueue)
 
-	// Get a new streamer (worker pool).
+	// Get a new streamer (worker pool) with three workers. We will push things to 
+	// encode to the videoQueue channel, and get our results back on the notifyChan.
 	wp := streamer.New(videoQueue, 3)
 
 	// Start the worker pool.
