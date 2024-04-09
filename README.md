@@ -3,6 +3,8 @@
 ![Tests](https://github.com/tsawler/streamer/actions/workflows/tests.yml/badge.svg)
 [![Go Coverage](https://github.com/tsawler/streamer/wiki/coverage.svg)](https://raw.githack.com/wiki/tsawler/streamer/coverage.html)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tsawler/streamer)](https://goreportcard.com/report/github.com/tsawler/streamer)
+<a href="https://pkg.go.dev/github.com/tsawler/streamer"><img src="https://img.shields.io/badge/godoc-reference-%23007d9c.svg"></a>
+
 
 # Streamer
 
