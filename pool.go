@@ -34,10 +34,11 @@ func (w videoWorker) start() {
 			// Add jobQueue to the worker pool.
 			w.workerPool <- w.jobQueue
 
-			select {
-			case job := <-w.jobQueue:
-				w.processVideoJob(job.Video)
-			}
+			// Wait for a job to come back.
+			job := <-w.jobQueue
+
+			// Process the video with a worker.
+			w.processVideoJob(job.Video)
 		}
 	}()
 }
@@ -63,13 +64,13 @@ func (vd *VideoDispatcher) Run() {
 // dispatch dispatches a worker.
 func (vd *VideoDispatcher) dispatch() {
 	for {
-		select {
-		case job := <-vd.jobQueue:
-			go func() {
-				workerJobQueue := <-vd.WorkerPool // assign a channel from our worker pool to workerJobPool.
-				workerJobQueue <- job             // Send the unit of work to our queue.
-			}()
-		}
+		// Wait for a job to come in.
+		job := <-vd.jobQueue
+
+		go func() {
+			workerJobQueue := <-vd.WorkerPool // assign a channel from our worker pool to workerJobPool.
+			workerJobQueue <- job             // Send the unit of work to our queue.
+		}()
 	}
 }
 
