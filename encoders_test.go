@@ -2,7 +2,7 @@ package streamer
 
 import "testing"
 
-func Test_EncodeToMP4(t *testing.T) {
+func Test_All_Encoders(t *testing.T) {
 	type args struct {
 		id  int
 		enc string
