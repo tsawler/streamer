@@ -1,3 +1,6 @@
+<a href="https://golang.org"><img src="https://img.shields.io/badge/powered_by-Go-3362c2.svg?style=flat-square" alt="Built with GoLang"></a>
+[![License](http://img.shields.io/badge/license-mit-blue.svg?style=flat-square)](https://raw.githubusercontent.com/tsawler/streamer/master/LICENSE)
+
 # Streamer
 
 Streamer is a simple package which creates a worker pool to encode videos to web-ready format. 
