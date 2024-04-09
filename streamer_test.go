@@ -109,7 +109,7 @@ func Test_encode(t *testing.T) {
 
 		result := <-testNotifyChan
 		if result.Successful != tt.expectSuccess {
-			t.Errorf("%s: expected result.Successful of %t but got %t", tt.name, result.Successful, tt.expectSuccess)
+			t.Errorf("%s: expected result.Successful of %t but got %t", tt.name, tt.expectSuccess, result.Successful)
 		}
 	}
 }
