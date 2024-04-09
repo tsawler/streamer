@@ -91,7 +91,7 @@ de0efc88a53c730aa764648e545e3874
 package. The location of enc.keyinfo can be specified when creating
 a variable of `streamer.Video` type, in the field `streamer.VideoOptions`, e.g.
 
-~~~
+~~~go
 video := streamer.Video{
     ID:           1,
     InputFile:    "./uploads/myfile.mp4",
