@@ -1,5 +1,12 @@
 # Streamer
 
+Streamer is a simple package which creates a worker pool to encode videos to web-ready format. 
+Currently, streamer encodes to MP4, HLS, and HLS encrypted formats.
+
+## Requirements
+
+Streamer requires [ffmpeg](https://ffmpeg.org/) to be in your path.
+
 ## Sample usage
 
 ~~~go
