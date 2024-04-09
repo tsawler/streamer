@@ -74,55 +74,6 @@ func TestNewVideo(t *testing.T) {
 	}
 }
 
-func Test_encodeToMP4(t *testing.T) {
-	type args struct {
-		id  int
-		enc string
-		ops *VideoOptions
-	}
-	tests := []struct {
-		name          string
-		processor     Processor
-		expectSuccess bool
-		args          args
-	}{
-		{name: "mp4", processor: testProcessor, expectSuccess: true, args: args{1, "mp4", &VideoOptions{RenameOutput: false}}},
-		{name: "mp4 rename", processor: testProcessor, expectSuccess: true, args: args{2, "mp4", &VideoOptions{RenameOutput: true}}},
-		{name: "mp4 no ops", processor: testProcessor, expectSuccess: true, args: args{3, "mp4", nil}},
-		{name: "mp4 failing", processor: testProcessorFailing, expectSuccess: false, args: args{4, "mp4", &VideoOptions{RenameOutput: false}}},
-		{name: "mp4 rename failing", processor: testProcessorFailing, expectSuccess: false, args: args{5, "mp4", &VideoOptions{RenameOutput: true}}},
-		{name: "mp4 no ops failing", processor: testProcessorFailing, expectSuccess: false, args: args{6, "mp4", nil}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wp := New(make(chan VideoProcessingJob), 1)
-			wp.Processor = tt.processor
-			v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", "./testdata/output", "mp4", testNotifyChan, tt.args.ops)
-
-			err := v.encodeToMP4()
-			if err != nil && tt.expectSuccess {
-				t.Errorf("%s: encode to mp4 failed: %s", tt.name, err.Error())
-				return
-			}
-
-			if err == nil && !tt.expectSuccess {
-				t.Errorf("%s: encode to mp4 did not fail, and it should", tt.name)
-				return
-			}
-
-			// We only wait for a channel for successful encodes, since we are testing
-			// the encoder, and not the encode() function.
-			if tt.expectSuccess {
-				result := <-testNotifyChan
-				if !result.Successful && tt.expectSuccess {
-					t.Errorf("%s: encoding failed", tt.name)
-				}
-			}
-		})
-	}
-}
-
 func Test_encode(t *testing.T) {
 	type args struct {
 		id  int
@@ -136,13 +87,14 @@ func Test_encode(t *testing.T) {
 		expectSuccess  bool
 	}{
 		{name: "mp4", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
-		{name: "mp4_fail", args: args{2, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: true},
-		{name: "hls rename", args: args{3, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls_fail", args: args{4, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
-		{name: "hls encrypted", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls encrypted rename", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls encrypted_fail", args: args{5, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
-		{name: "invalid encoding type", args: args{6, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
+		{name: "mp4_no_options", args: args{2, "mp4", nil}, expectSuccess: true, useFailEncoder: false},
+		{name: "mp4_fail", args: args{3, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: true},
+		{name: "hls rename", args: args{4, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls_fail", args: args{5, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
+		{name: "hls encrypted", args: args{6, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls encrypted rename", args: args{7, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls encrypted_fail", args: args{8, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
+		{name: "invalid encoding type", args: args{9, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
 	}
 	for _, tt := range tests {
 		wp := New(make(chan VideoProcessingJob), 1)
