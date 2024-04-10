@@ -10,4 +10,8 @@ tasks:
     cmds:
       - go test -v -race .
 
+  test-integration:
+    cmds:
+      - go test -v -tags=integration ./...
+
 
