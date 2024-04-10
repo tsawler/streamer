@@ -26,7 +26,7 @@ go test -v -race .
 To run all tests, including the encoders (requires ffmpeg to be installed):
 
 ~~~
-go test -race  -tags=integration ./...
+go test -v -race -tags=integration .
 ~~~
 
 ## Sample usage
