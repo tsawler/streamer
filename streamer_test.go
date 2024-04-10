@@ -66,7 +66,7 @@ func TestNewVideo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wp := New(make(chan VideoProcessingJob), 1)
-			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, testNotifyChan, tt.args.ops)
+			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./testdata/output", tt.args.enc, testNotifyChan, tt.args.ops)
 			if v.Options.RenameOutput != tt.args.ops.RenameOutput {
 				t.Errorf("wrong value for rename; got %t expected %t", v.Options.RenameOutput, tt.args.ops.RenameOutput)
 			}
@@ -137,7 +137,7 @@ func Test_pool(t *testing.T) {
 			wp.Processor = testProcessor
 			wp.Run()
 
-			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./output", tt.args.enc, testNotifyChan, tt.args.ops)
+			v := wp.NewVideo(tt.args.id, "./a/b.mp4", "./testdata/output", tt.args.enc, testNotifyChan, tt.args.ops)
 
 			videoQueue <- VideoProcessingJob{Video: v}
 

@@ -1,0 +1,13 @@
+version: '3'
+
+tasks:
+
+  clean:
+    cmds:
+      - rm -rf ./testdata/output
+
+  test:
+    cmds:
+      - go test -v -race .
+
+
