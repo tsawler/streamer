@@ -18,6 +18,7 @@ func TestNew(t *testing.T) {
 		{name: "test_new", args: args{jobQueue: make(chan VideoProcessingJob, 10)}, useFailEncoder: false},
 		{name: "test_new_with_encoder", args: args{jobQueue: make(chan VideoProcessingJob, 10)}, useFailEncoder: true},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got *VideoDispatcher
@@ -96,6 +97,7 @@ func Test_encode(t *testing.T) {
 		{name: "hls encrypted_fail", args: args{8, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
 		{name: "invalid encoding type", args: args{9, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
 	}
+
 	for _, tt := range tests {
 		wp := New(make(chan VideoProcessingJob), 1)
 		v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", "./testdata/output", tt.args.enc, testNotifyChan, tt.args.ops)
@@ -113,6 +115,7 @@ func Test_encode(t *testing.T) {
 		}
 	}
 }
+
 func Test_pool(t *testing.T) {
 	type args struct {
 		id  int
