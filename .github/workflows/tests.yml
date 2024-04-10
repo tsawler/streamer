@@ -14,8 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: FedericoCarboni/setup-ffmpeg@v3
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
