@@ -15,6 +15,20 @@ Currently, streamer encodes to MP4, HLS, and HLS encrypted formats.
 
 Streamer requires [ffmpeg](https://ffmpeg.org/) to be in your path.
 
+## Tests
+
+To run unit tests, execute:
+
+~~~
+go test -v -race .
+~~~
+
+To run all tests, including the encoders (requires ffmpeg to be installed):
+
+~~~
+go test -race  -tags=integration ./...
+~~~
+
 ## Sample usage
 
 ~~~go
