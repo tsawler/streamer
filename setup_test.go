@@ -6,8 +6,13 @@ import (
 	"testing"
 )
 
+// testProcessor is a variable which satisfies the Encoder interface, and always returns no error.
 var testProcessor Processor
+
+// testProcessorFailing is a variable which satisfies the Encoder interface, and always returns an error.
 var testProcessorFailing Processor
+
+// testNotifyChan is the channel we use to get the results of an encode, for testing.
 var testNotifyChan chan ProcessingMessage
 
 func TestMain(m *testing.M) {
