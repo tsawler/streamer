@@ -3,7 +3,6 @@ package streamer
 import (
 	"fmt"
 	"github.com/xfrr/goffmpeg/transcoder"
-	"log"
 	"os/exec"
 	"strconv"
 )
@@ -157,7 +156,6 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 
 	err := <-result
 	if err != nil {
-		log.Println("Error encoding encrypted:", err.Error())
 		return err
 	}
 
