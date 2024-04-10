@@ -14,4 +14,8 @@ tasks:
     cmds:
       - go test -v -tags=integration ./...
 
+  coverage:
+    cmds:
+      - go test -tags=integration -coverprofile=coverage.out ./... && go tool cover -html=coverage.out
+
 
