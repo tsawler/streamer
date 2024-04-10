@@ -27,17 +27,18 @@ func TestMain(m *testing.M) {
 // test successful encoding, so all its methods return nil (no error).
 type testEncoder struct{}
 
-// EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
+// EncodeToMP4 takes a Video object and a base file name, and simulates encoding to MP4 format successfully.
 func (te *testEncoder) EncodeToMP4(v *Video, baseFileName string) error {
 	return nil
 }
 
-// EncodeToHLS takes a Video object and a base file name, and encodes to HLS format.
+// EncodeToHLS takes a Video object and a base file name, and simulates encoding to HLS format successfully.
 func (te *testEncoder) EncodeToHLS(v *Video, baseFileName string) error {
 	return nil
 }
 
-// EncodeToHLSEncrypted takes a Video object and a base file name, and encodes to encrypted HLS format.
+// EncodeToHLSEncrypted takes a Video object and a base file name, and simulates encoding to encrypted HLS format
+// successfully.
 func (te *testEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error {
 	return nil
 }
@@ -46,17 +47,18 @@ func (te *testEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) error
 // test for encodes which fail, so all its methods return an error.
 type testEncoderFailing struct{}
 
-// EncodeToMP4 takes a Video object and a base file name, and encodes to MP4 format.
+// EncodeToMP4 takes a Video object and a base file name, and simulates encoding to MP4 format unsuccessfully.
 func (tef *testEncoderFailing) EncodeToMP4(v *Video, baseFileName string) error {
 	return errors.New("some error")
 }
 
-// EncodeToHLS takes a Video object and a base file name, and encodes to HLS format.
+// EncodeToHLS takes a Video object and a base file name, and simulates encoding to HLS format unsuccessfully.
 func (tef *testEncoderFailing) EncodeToHLS(v *Video, baseFileName string) error {
 	return errors.New("some error")
 }
 
-// EncodeToHLSEncrypted takes a Video object and a base file name, and encodes to encrypted HLS format.
+// EncodeToHLSEncrypted takes a Video object and a base file name, and simulates encoding to encrypted HLS format
+// unsuccessfully.
 func (tef *testEncoderFailing) EncodeToHLSEncrypted(v *Video, baseFileName string) error {
 	return errors.New("some error")
 }
