@@ -7,8 +7,8 @@ type VideoProcessingJob struct {
 	Video Video
 }
 
-// newVideoWorker takes a numeric id and a channel w/ worker pool, and returns
-// a videoWorker object.
+// newVideoWorker takes a numeric id and a channel which accepts the chan VideoProcessingJob
+// type, and returns a videoWorker object.
 func newVideoWorker(id int, workerPool chan chan VideoProcessingJob) videoWorker {
 	return videoWorker{
 		id:         id,
