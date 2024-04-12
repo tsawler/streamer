@@ -27,7 +27,7 @@ type videoWorker struct {
 	workerPool chan chan VideoProcessingJob // Our worker pool channel.
 }
 
-// start starts a worker.
+// start starts an individual worker.
 func (w videoWorker) start() {
 	go func() {
 		for {
