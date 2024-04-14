@@ -91,22 +91,26 @@ func Test_encode(t *testing.T) {
 		name           string
 		args           args
 		useFailEncoder bool
+		output         string
 		expectSuccess  bool
 	}{
-		{name: "mp4", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
-		{name: "mp4_no_options", args: args{2, "mp4", nil}, expectSuccess: true, useFailEncoder: false},
-		{name: "mp4_fail", args: args{3, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: true},
-		{name: "hls rename", args: args{4, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls_fail", args: args{5, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
-		{name: "hls encrypted", args: args{6, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls encrypted rename", args: args{7, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
-		{name: "hls encrypted_fail", args: args{8, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
-		{name: "invalid encoding type", args: args{9, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
+		{name: "mp4", output: "./testdata/output", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
+		{name: "mp4 invalid output", output: "/foo", args: args{1, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: false},
+		{name: "mp4_no_options", output: "./testdata/output", args: args{2, "mp4", nil}, expectSuccess: true, useFailEncoder: false},
+		{name: "mp4_fail", output: "./testdata/output", args: args{3, "mp4", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: true},
+		{name: "hls rename", output: "./testdata/output", args: args{4, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls invalid output", output: "/foo", args: args{4, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: false},
+		{name: "hls_fail", output: "./testdata/output", args: args{5, "hls", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
+		{name: "hls encrypted", output: "./testdata/output", args: args{6, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls encrypted invalid output", output: "/foo", args: args{6, "hls-encrypted", &VideoOptions{RenameOutput: false}}, expectSuccess: false, useFailEncoder: false},
+		{name: "hls encrypted rename", output: "./testdata/output", args: args{7, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: true, useFailEncoder: false},
+		{name: "hls encrypted_fail", output: "./testdata/output", args: args{8, "hls-encrypted", &VideoOptions{RenameOutput: true}}, expectSuccess: false, useFailEncoder: true},
+		{name: "invalid encoding type", output: "./testdata/output", args: args{9, "fish", &VideoOptions{RenameOutput: true}}, expectSuccess: false},
 	}
 
 	for _, tt := range tests {
 		wp := New(make(chan VideoProcessingJob), 1)
-		v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", "./testdata/output", tt.args.enc, testNotifyChan, tt.args.ops)
+		v := wp.NewVideo(tt.args.id, "./testdata/i.mp4", tt.output, tt.args.enc, testNotifyChan, tt.args.ops)
 		if tt.useFailEncoder {
 			v.Encoder = testProcessorFailing
 		} else {
