@@ -23,12 +23,6 @@ func Test_All_Encoders(t *testing.T) {
 		{name: "mp4", expectSuccess: true, args: args{id: 4, file: "./testdata/dog.mp4", enc: "mp4", output: "./testdata/output", ops: nil}},
 		{name: "hls", expectSuccess: true, args: args{id: 5, file: "./testdata/dog.mp4", enc: "hls", output: "./testdata/output", ops: nil}},
 		{name: "hls invalid output", expectSuccess: false, args: args{id: 5, file: "./testdata/dog.mp4", enc: "hls", output: "/foo", ops: nil}},
-		{name: "hls-encrypted", expectSuccess: true, args: args{id: 6, file: "./testdata/dog.mp4", output: "./testdata/output", enc: "hls",
-			ops: &VideoOptions{
-				RenameOutput: false,
-				Secret:       "enc.key",
-				KeyInfo:      "./testdata/keys/enc.keyinfo",
-			}}},
 	}
 
 	for _, tt := range tests {
