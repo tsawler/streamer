@@ -2,7 +2,10 @@
 
 package streamer
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func Test_All_Encoders(t *testing.T) {
 	type args struct {
@@ -39,4 +42,10 @@ func Test_All_Encoders(t *testing.T) {
 			}
 		})
 	}
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll("./testdata/output"); err != nil {
+			t.Error("error cleaning up")
+		}
+	})
 }
