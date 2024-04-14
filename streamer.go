@@ -18,7 +18,7 @@ type Processor struct {
 // ProcessingMessage is the information sent back to the client.
 type ProcessingMessage struct {
 	ID         int    `json:"id"`          // The ID of the video.
-	Successful bool   `json:"successful"`  // True if successfully encoded.
+	Successful bool   `json:"successful"`  // True if video was successfully encoded.
 	Message    string `json:"message"`     // A human-readable message.
 	OutputFile string `json:"output_file"` // The name of the generated file.
 }
@@ -34,9 +34,13 @@ type Video struct {
 	Encoder      Processor              // The processing engine we'll use for encoding.
 }
 
-// New creates and returns a new worker pool.
+// New creates and returns a new worker pool. The final parameter is optional, and if not specified
+// we use the default Processor with an embedded Engine.
 func New(jobQueue chan VideoProcessingJob, maxWorkers int, encoder ...Processor) *VideoDispatcher {
+	// Create a worker pool channel.
 	workerPool := make(chan chan VideoProcessingJob, maxWorkers)
+
+	// Use default Processor or one specified by caller.
 	var p Processor
 	if len(encoder) > 0 {
 		p = Processor{
@@ -48,6 +52,13 @@ func New(jobQueue chan VideoProcessingJob, maxWorkers int, encoder ...Processor)
 			Engine: &e,
 		}
 	}
+
+	// Sanity check.
+	if maxWorkers <= 0 {
+		maxWorkers = 1
+	}
+
+	// Return VideoDispatcher.
 	return &VideoDispatcher{
 		jobQueue:   jobQueue,
 		maxWorkers: maxWorkers,
@@ -67,8 +78,7 @@ type VideoOptions struct {
 	MaxRate480p     string // The Maximum rate for 480p encoding.
 }
 
-// NewVideo is a convenience factory method for creating video objects with
-// sensible default values.
+// NewVideo is a convenience factory method for creating video objects with sensible default values.
 func (vd *VideoDispatcher) NewVideo(id int, input, output, encType string, notifyChan chan ProcessingMessage, ops *VideoOptions) Video {
 	if ops == nil {
 		ops = &VideoOptions{}
