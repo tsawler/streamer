@@ -3,7 +3,6 @@ package streamer
 import (
 	"fmt"
 	"github.com/tsawler/toolbox"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -146,7 +145,8 @@ func (v *Video) encode() {
 // specified in the receiver as v.OutputDir. The resulting files are encrypted.
 func (v *Video) encodeToHLSEncrypted() (string, error) {
 	// Make sure output directory exists.
-	err := v.createDirIfNotExists()
+	var t toolbox.Tools
+	err := t.CreateDirIfNotExist(v.OutputDir)
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +175,8 @@ func (v *Video) encodeToHLSEncrypted() (string, error) {
 // specified in the receiver as v.OutputDir.
 func (v *Video) encodeToHLS() (string, error) {
 	// Make sure output directory exists.
-	err := v.createDirIfNotExists()
+	var t toolbox.Tools
+	err := t.CreateDirIfNotExist(v.OutputDir)
 	if err != nil {
 		return "", err
 	}
@@ -198,20 +199,6 @@ func (v *Video) encodeToHLS() (string, error) {
 	return baseFileName, nil
 }
 
-// createDirIfNotExists creates the output directory, and all required
-// parent directories, if it does not already exist.
-func (v *Video) createDirIfNotExists() error {
-	// Create output directory if it does not exist.
-	const mode = 0755
-	if _, err := os.Stat(v.OutputDir); os.IsNotExist(err) {
-		err := os.MkdirAll(v.OutputDir, mode)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // sendToNotifyChan pushes a message down the notify channel.
 func (v *Video) sendToNotifyChan(successful bool, fileName, message string) {
 	v.NotifyChan <- ProcessingMessage{
@@ -226,7 +213,8 @@ func (v *Video) sendToNotifyChan(successful bool, fileName, message string) {
 // putting resulting file in the output directory specified in the receiver as v.OutputDir.
 func (v *Video) encodeToMP4() (string, error) {
 	// Make sure output directory exists.
-	err := v.createDirIfNotExists()
+	var t toolbox.Tools
+	err := t.CreateDirIfNotExist(v.OutputDir)
 	if err != nil {
 		return "", err
 	}

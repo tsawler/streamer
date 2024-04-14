@@ -17,6 +17,7 @@ func TestNew(t *testing.T) {
 	}{
 		{name: "test_new", args: args{jobQueue: make(chan VideoProcessingJob, 10), maxWorkers: 1}, useFailEncoder: false},
 		{name: "test_new_with_encoder", args: args{jobQueue: make(chan VideoProcessingJob, 10), maxWorkers: 3}, useFailEncoder: true},
+		{name: "test_new_with_encoder", args: args{jobQueue: make(chan VideoProcessingJob, 10), maxWorkers: 0}, useFailEncoder: true},
 	}
 
 	for _, tt := range tests {
@@ -32,9 +33,14 @@ func TestNew(t *testing.T) {
 				got = New(tt.args.jobQueue, tt.args.maxWorkers)
 			}
 
-			if got.maxWorkers != tt.args.maxWorkers {
+			if got.maxWorkers != tt.args.maxWorkers && tt.args.maxWorkers > 0 {
 				t.Errorf("New() = %d, want %d", got.maxWorkers, tt.args.maxWorkers)
 			}
+
+			if got.maxWorkers != 1 && tt.args.maxWorkers == 0 {
+				t.Errorf("New() = %d, want %d", got.maxWorkers, tt.args.maxWorkers)
+			}
+
 			var isChannel = reflect.ValueOf(got.jobQueue).Kind() == reflect.Chan
 			if !isChannel {
 				t.Error("jobQueue is not a channel")
