@@ -45,5 +45,4 @@ func Test_All_Encoders(t *testing.T) {
 			}
 		})
 	}
-
 }
