@@ -113,8 +113,8 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 		ffmpegCmd := exec.Command(
 			"ffmpeg",
 			"-i", v.InputFile,
-			"-map", "0:v:0",
-			"-map", "0:a:0",
+			"-map", "0:v:0", // We need three of this line and the next (one
+			"-map", "0:a:0", // for each of the resolutions we want to encode to).
 			"-map", "0:v:0",
 			"-map", "0:a:0",
 			"-map", "0:v:0",
