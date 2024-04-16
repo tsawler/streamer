@@ -119,20 +119,20 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 			"-map", "0:a:0",
 			"-map", "0:v:0",
 			"-map", "0:a:0",
-			"-c:v", "libx264",
+			"-c:v", "libx264", // Our video codec (H.264/MPEG-4 AVC video coding format).
 			"-crf", "22",
 			"-c:a", "aac",
 			"-ar", "48000",
-			"-filter:v:0", "scale=-2:1080",
+			"-filter:v:0", "scale=-2:1080", // 1080p resolution.
 			"-maxrate:v:0", v.Options.MaxRate1080p,
 			"-b:a:0", "128k",
-			"-filter:v:1", "scale=-2:720",
+			"-filter:v:1", "scale=-2:720", // 720p resolution.
 			"-maxrate:v:1", v.Options.MaxRate720p,
 			"-b:a:1", "128k",
-			"-filter:v:2", "scale=-2:480",
+			"-filter:v:2", "scale=-2:480", // 480p resolution.
 			"-maxrate:v:2", v.Options.MaxRate480p,
 			"-b:a:2", "64k",
-			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p",
+			"-var_stream_map", "v:0,a:0,name:1080p v:1,a:1,name:720p v:2,a:2,name:480p", // Our map of resolutions.
 			"-preset", "slow",
 			"-hls_list_size", "0",
 			"-threads", "0",
