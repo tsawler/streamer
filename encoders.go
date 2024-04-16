@@ -144,7 +144,7 @@ func (ve *VideoEncoder) EncodeToHLSEncrypted(v *Video, baseFileName string) erro
 			"-hls_key_info_file", v.Options.KeyInfo,
 			"-hls_playlist_type", "vod",
 			"-master_pl_name", fmt.Sprintf("%s.m3u8", baseFileName),
-			"-profile:v", "baseline", // baseline profile is compatible with most devices
+			"-profile:v", "baseline", // The baseline profile is compatible with most devices.
 			"-level", "3.0",
 			"-progress", "-",
 			"-nostats",
