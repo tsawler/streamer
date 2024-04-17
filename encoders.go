@@ -50,6 +50,7 @@ func (ve *VideoEncoder) EncodeToMP4(v *Video, baseFileName string) error {
 
 // EncodeToHLS takes a Video object and a base file name, and encodes to HLS format.
 func (ve *VideoEncoder) EncodeToHLS(v *Video, baseFileName string) error {
+	// result is a channel that we will send the results of the encode attempt to.
 	result := make(chan error)
 
 	go func(result chan error) {
@@ -94,9 +95,12 @@ func (ve *VideoEncoder) EncodeToHLS(v *Video, baseFileName string) error {
 		)
 
 		_, err := ffmpegCmd.CombinedOutput()
+
+		// Send err to result channel. It will be nil if everything worked.
 		result <- err
 	}(result)
 
+	// Wait for the goroutine to send results to the result chan.
 	err := <-result
 	if err != nil {
 		return err
